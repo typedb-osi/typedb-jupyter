@@ -49,7 +49,7 @@ class Connection(object):
                 session_arg = "schema"
             else:
                 session_arg = "data"
-            print("Switched to {} session for connection: {}".format(session_arg, self.alias))
+            print("Switched to {} session for connection: {}".format(session_arg, self.verbose_name))
             return
 
     @classmethod
@@ -72,12 +72,12 @@ class Connection(object):
                 raise ArgumentError("Current connection was closed. Use -l to list connections and -n to select connection.")
             else:
                 if show_connection:
-                    print("Current connection: {}".format(cls.current.alias))
+                    print("Current connection: {}".format(cls.current.verbose_name))
 
         elif args.database is None:
             if args.alias in cls.aliases():
                 cls.current = cls.get_by_alias(args.alias)
-                print("Selected connection: {}".format(cls.current.alias))
+                print("Selected connection: {}".format(cls.current.verbose_name))
             else:
                 raise ArgumentError("Connection name not recognised. Use -l to list connections.")
 
@@ -110,6 +110,7 @@ class Connection(object):
     @classmethod
     def close(cls, alias, delete):
         connection = cls.get_by_alias(alias)
+        verbose_name = connection.verbose_name
 
         if cls.current.alias == alias:
             cls.current = None
@@ -122,4 +123,4 @@ class Connection(object):
             print("Deleted database: {}".format(connection.name))
 
         del cls.connections[connection.name]
-        print("Closed connection: {}".format(alias))
+        print("Closed connection: {}".format(verbose_name))
