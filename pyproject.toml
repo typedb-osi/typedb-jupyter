@@ -22,11 +22,11 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "typedb-client>=2.17",
+    "typedb-client~=2.17",
     "ipython"
 ]
 
 [project.urls]
-"Repository" = "https://github.com/james-whiteside/typedb-jupyter"
+"Repository" = "https://github.com/typedb-osi/typedb-jupyter"
 "TypeDB" = "https://github.com/vaticle/typedb"
 "Vaticle" = "https://vaticle.com/"
