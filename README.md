@@ -146,12 +146,12 @@ Results of read queries are returned in a JSON-like native Python
 object. The shape of the object is dependent on the type of query, as
 described in the following table:
 
-| Query type              | Output object type     |
-|-------------------------|------------------------|
-| `match`                 | `list<dict>`           |
-| `match-group`           | `dict<list<dict>>`     |
-| `match-aggregate`       | `int&#124;float`       |
-| `match-group-aggregate` | `dict<int&#124;float>` |
+| Query type              | Output object type    |
+|-------------------------|-----------------------|
+| `match`                 | `list<dict>`          |
+| `match-group`           | `dict<list<dict>>`    |
+| `match-aggregate`       | `intǀfloat`       |
+| `match-group-aggregate` | `dict<intǀfloat>` |
 
 A connection can be opened or selected in the same call it is utilised with
 `-d`, `-a`, and `-n` as specified above. Queries automatically interpolate
