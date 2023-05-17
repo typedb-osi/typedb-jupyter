@@ -1,3 +1,4 @@
+from typedb.api.connection.credential import TypeDBCredential
 from typedb.client import TypeDB
 from typedb.api.connection.session import SessionType
 from typedb_jupyter.exception import ArgumentError
@@ -7,7 +8,7 @@ class Connection(object):
     current = None
     connections = dict()
 
-    def __init__(self, address, database, alias, create_database):
+    def __init__(self, client, address, database, credential, alias, create_database):
         self.address = address
         self.database = database
         self.name = "{}@{}".format(database, address)
@@ -19,18 +20,21 @@ class Connection(object):
             self.alias = alias
             self.verbose_name = "{} ({})".format(self.alias, self.name)
 
-        client = TypeDB.core_client(address)
+        if client is TypeDB.core_client:
+            self.client = TypeDB.core_client(address)
+        elif client is TypeDB.cluster_client:
+            self.client = TypeDB.cluster_client(address, credential)
+        else:
+            raise ValueError("Unknown client type. Please report this error.")
 
-        if not client.databases().contains(database):
+        if not self.client.databases().contains(database):
             if create_database:
-                client.databases().create(database)
+                self.client.databases().create(database)
                 print("Created database: {}".format(self.database))
             else:
                 raise ArgumentError("Database with name '{}' does not exist and automatic database creation has been disabled.".format(database))
 
-        self.client = client
-        self.session = client.session(database, SessionType.DATA)
-
+        self.session = self.client.session(database, SessionType.DATA)
         self.connections[self.name] = self
 
     def __del__(self):
@@ -63,24 +67,34 @@ class Connection(object):
 
     @classmethod
     def set(cls, args, create_database):
-        if args.database is None and args.alias is None:
-            if args.address is not None:
+        cluster_args = (args.username, args.password, args.certificate)
+
+        if args.database is None:
+            if args.address is not None or not all(arg is None for arg in cluster_args):
                 raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
-            else:
+
+            if args.alias is None:
                 print("Current connection: {}".format(cls._get_current().verbose_name))
-
-        elif args.database is None:
-            cls.current = cls._get_by_alias(args.alias)
-            print("Selected connection: {}".format(cls.current.verbose_name))
-
+            else:
+                cls.current = cls._get_by_alias(args.alias)
+                print("Selected connection: {}".format(cls.current.verbose_name))
         else:
+            if all(arg is None for arg in cluster_args):
+                client = TypeDB.core_client
+                credential = None
+            elif all(arg is not None for arg in cluster_args):
+                client = TypeDB.cluster_client
+                credential = TypeDBCredential(args.username, args.password, args.certificate)
+            else:
+                raise ArgumentError("Cannot open cluster connection without a username, password, and certificate path. Use -u, -p, and -c to specify these.")
+
             if args.address is None:
                 args.address = TypeDB.DEFAULT_ADDRESS
 
             if "{}@{}".format(args.database, args.address) in cls.connections:
                 raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
 
-            cls.current = Connection(args.address, args.database, args.alias, create_database)
+            cls.current = Connection(client, args.address, args.database, credential, args.alias, create_database)
             print("Opened connection: {}".format(cls.current.verbose_name))
 
     @classmethod

@@ -43,15 +43,17 @@ class TypeDBMagic(Magics, Configurable):
     @magic_arguments()
     @argument("-a", "--address", type=str, help="TypeDB server address for new connection.")
     @argument("-d", "--database", type=str, help="Database name for new connection.")
-    @argument("-n", "--alias", type=str, help="Custom name for new connection, or name of existing connection to select.")
-    @argument("-l", "--connections", action="store_true", help="List currently open connections.")
-    @argument("-c", "--close", type=str, help="Close a connection by name.")
-    @argument("-k", "--delete", type=str, help="Close a connection by name and delete its database.")
+    @argument("-u", "--username", type=str, help="Username for new Cloud/Cluster connection.")
+    @argument("-p", "--password", type=str, help="Password for new Cloud/Cluster connection.")
+    @argument("-c", "--certificate", type=str, help="TLS certificate path for new Cloud/Cluster connection.")
+    @argument("-n", "--alias", type=str, help="Alias for new connection, or alias of existing connection to select.")
+    @argument("-l", "--list", action="store_true", help="List currently open connections.")
+    @argument("-k", "--close", type=str, help="Close a connection by name.")
+    @argument("-x", "--delete", type=str, help="Close a connection by name and delete its database.")
     def execute(self, line=""):
-
         args = parse_argstring(self.execute, line)
 
-        if args.connections:
+        if args.list:
             return typedb_jupyter.connection.Connection.list()
         elif args.delete:
             return typedb_jupyter.connection.Connection.close(args.delete, delete=True)
