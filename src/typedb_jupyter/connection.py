@@ -112,7 +112,7 @@ class Connection(object):
         connection = cls._get_by_alias(alias)
         verbose_name = connection.verbose_name
 
-        if cls.current.alias == alias:
+        if cls.current is not None and cls.current.alias == alias:
             cls.current = None
 
         connection = cls.connections[connection.name]
