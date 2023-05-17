@@ -7,7 +7,7 @@ from typedb.concept.answer.concept_map import ConceptMap
 from typedb.concept.answer.concept_map_group import ConceptMapGroup
 from typedb.concept.answer.numeric import Numeric
 from typedb.concept.answer.numeric_group import NumericGroup
-from tql.exception import ArgumentError, QueryParsingError
+from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 
 def group_key(concept):

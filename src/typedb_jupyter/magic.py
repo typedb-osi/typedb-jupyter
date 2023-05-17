@@ -4,9 +4,9 @@ from traitlets import Bool
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
 from typedb.common.exception import TypeDBClientException
-import tql.connection
-import tql.query
-from tql.exception import QueryParsingError
+import typedb_jupyter.connection
+import typedb_jupyter.query
+from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 
 def substitute_vars(query, local_ns):
@@ -32,16 +32,54 @@ def substitute_vars(query, local_ns):
 
 
 @magics_class
-class TQLMagic(Magics, Configurable):
-    show_connection = Bool(
-        True,
-        config=True,
-        help="Always show current connection name when executing a query."
-    )
+class TypeDBMagic(Magics, Configurable):
     create_database = Bool(
         True,
         config=True,
         help="Create database when opening a connection if it does not already exist."
+    )
+
+    @needs_local_scope
+    @line_magic("typedb")
+    @cell_magic("typedb")
+    @magic_arguments()
+    @argument("-a", "--address", type=str, help="TypeDB server address for new connection.")
+    @argument("-d", "--database", type=str, help="Database name for new connection.")
+    @argument("-n", "--alias", type=str, help="Custom name for new connection, or name of existing connection to select.")
+    @argument("-l", "--connections", action="store_true", help="List currently open connections.")
+    @argument("-c", "--close", type=str, help="Close a connection by name.")
+    @argument("-k", "--delete", type=str, help="Close a connection by name and delete its database.")
+    @argument("-p", "--parallelisation", type=int, help="Number of server communication threads for new connection.")
+    def execute(self, line="", cell="", local_ns=None):
+        args = parse_argstring(self.execute, line)
+
+        if args.connections:
+            return typedb_jupyter.connection.Connection.list()
+        elif args.delete:
+            return typedb_jupyter.connection.Connection.close(args.delete, delete=True)
+        elif args.close:
+            return typedb_jupyter.connection.Connection.close(args.close, delete=False)
+
+        try:
+            return typedb_jupyter.connection.Connection.set(args, self.create_database)
+        except TypeDBClientException:
+            print(traceback.format_exc())
+            return
+
+    def __init__(self, shell):
+        Configurable.__init__(self, config=shell.config)
+        Magics.__init__(self, shell=shell)
+
+        # Add ourselves to the list of module configurable via %config
+        self.shell.configurables.append(self)
+
+
+@magics_class
+class TypeQLMagic(Magics, Configurable):
+    show_connection = Bool(
+        True,
+        config=True,
+        help="Always show current connection name when executing a query."
     )
     strict_transactions = Bool(
         False,
@@ -55,17 +93,10 @@ class TQLMagic(Magics, Configurable):
     )
 
     @needs_local_scope
-    @line_magic("tql")
-    @cell_magic("tql")
+    @line_magic("typeql")
+    @cell_magic("typeql")
     @magic_arguments()
     @argument("line", default="", nargs="*", type=str, help="Valid TypeQL string.")
-    @argument("-a", "--address", type=str, help="TypeDB server address for new connection.")
-    @argument("-d", "--database", type=str, help="Database name for new connection.")
-    @argument("-n", "--alias", type=str, help="Custom name for new connection, or name of existing connection to select.")
-    @argument("-l", "--connections", action="store_true", help="List currently open connections.")
-    @argument("-c", "--close", type=str, help="Close a connection by name.")
-    @argument("-k", "--delete", type=str, help="Close a connection by name and delete its database.")
-    @argument("-p", "--parallelisation", type=int, help="Number of server communication threads for new connection.")
     @argument("-r", "--result", type=str, help="Assign query result to the named variable instead of printing.")
     @argument("-f", "--file", type=str, help="Read in query from a TypeQL file at the specified path.")
     @argument("-i", "--inference", type=bool, help="Enable (True) or disable (False) rule inference for query.")
@@ -79,13 +110,6 @@ class TQLMagic(Magics, Configurable):
         query = " ".join(args.line) + "\n" + cell
         query = substitute_vars(query, local_ns)
 
-        if args.connections:
-            return tql.connection.Connection.list_connections()
-        elif args.delete:
-            return tql.connection.Connection.close(args.delete, delete=True)
-        elif args.close:
-            return tql.connection.Connection.close(args.close, delete=False)
-
         # Save globals and locals, so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
         user_ns.update(local_ns)
@@ -94,16 +118,14 @@ class TQLMagic(Magics, Configurable):
             with open(args.file, "r") as infile:
                 query = infile.read() + "\n" + query
 
-        try:
-            connection = tql.connection.Connection.set(args, self.show_connection, self.create_database)
-        except TypeDBClientException:
-            print(traceback.format_exc())
-            return
+        if not query.strip():
+            raise ArgumentError("No query string supplied.")
 
-        if not query:
-            return
+        if self.show_connection:
+            typedb_jupyter.connection.Connection.display()
 
-        result = tql.query.run(connection, query, args, self.strict_transactions, self.global_inference)
+        connection = typedb_jupyter.connection.Connection.get()
+        result = typedb_jupyter.query.run(connection, query, args, self.strict_transactions, self.global_inference)
 
         if args.result:
             print("Returning data to local variable: '{}'".format(args.result))

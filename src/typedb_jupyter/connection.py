@@ -1,6 +1,6 @@
 from typedb.client import TypeDB
 from typedb.api.connection.session import SessionType
-from tql.exception import ArgumentError
+from typedb_jupyter.exception import ArgumentError
 
 
 class Connection(object):
@@ -41,6 +41,58 @@ class Connection(object):
         finally:
             self.client.close()
 
+    @classmethod
+    def _aliases(cls):
+        return [cls.connections[name].alias for name in cls.connections]
+
+    @classmethod
+    def _get_current(cls):
+        if len(cls.connections) == 0:
+            raise ArgumentError(
+                "No database connection exists. Use -a and -d to specify server address and database name.")
+        elif cls.current is None:
+            raise ArgumentError(
+                "Current connection was closed. Use -l to list connections and -n to select connection.")
+
+        return cls.current
+
+    @classmethod
+    def _get_by_alias(cls, alias):
+        try:
+            return {cls.connections[name].alias: cls.connections[name] for name in cls.connections}[alias]
+        except KeyError:
+            raise ArgumentError("Connection name not recognised. Use -l to list connections.")
+
+    @classmethod
+    def set(cls, args, create_database):
+        if args.database is None and args.alias is None:
+            if args.address is not None:
+                raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
+            else:
+                cls.display()
+
+        elif args.database is None:
+            cls.current = cls._get_by_alias(args.alias)
+            print("Selected connection: {}".format(cls.current.verbose_name))
+
+        else:
+            if args.address is None:
+                args.address = TypeDB.DEFAULT_ADDRESS
+
+            if "{}@{}".format(args.database, args.address) in cls.connections:
+                raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
+
+            cls.current = Connection(args.address, args.database, args.alias, args.parallelisation, create_database)
+            print("Opened connection: {}".format(cls.current.verbose_name))
+
+    @classmethod
+    def get(cls):
+        return cls._get_current()
+
+    @classmethod
+    def display(cls):
+        print("Current connection: {}".format(cls._get_current().verbose_name))
+
     def set_session(self, session_type):
         if self.session.session_type() != session_type:
             self.session.close()
@@ -53,48 +105,7 @@ class Connection(object):
             return
 
     @classmethod
-    def aliases(cls):
-        return [cls.connections[name].alias for name in cls.connections]
-
-    @classmethod
-    def get_by_alias(cls, alias):
-        try:
-            return {cls.connections[name].alias: cls.connections[name] for name in cls.connections}[alias]
-        except KeyError:
-            raise ArgumentError("Connection name not recognised. Use -l to list connections.")
-
-    @classmethod
-    def set(cls, args, show_connection, create_database):
-        if args.database is None and args.alias is None:
-            if len(cls.connections) == 0:
-                raise ArgumentError("No database connection exists. Use -a and -d to specify server address and database name.")
-            elif cls.current is None:
-                raise ArgumentError("Current connection was closed. Use -l to list connections and -n to select connection.")
-            else:
-                if show_connection:
-                    print("Current connection: {}".format(cls.current.verbose_name))
-
-        elif args.database is None:
-            if args.alias in cls.aliases():
-                cls.current = cls.get_by_alias(args.alias)
-                print("Selected connection: {}".format(cls.current.verbose_name))
-            else:
-                raise ArgumentError("Connection name not recognised. Use -l to list connections.")
-
-        else:
-            if args.address is None:
-                args.address = TypeDB.DEFAULT_ADDRESS
-
-            if "{}@{}".format(args.database, args.address) in cls.connections:
-                raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
-
-            cls.current = Connection(args.address, args.database, args.alias, args.parallelisation, create_database)
-            print("Opened connection: {}".format(cls.current.verbose_name))
-
-        return cls.current
-
-    @classmethod
-    def list_connections(cls):
+    def list(cls):
         if len(cls.connections) == 0:
             print("No open connections.")
         else:
@@ -109,7 +120,7 @@ class Connection(object):
 
     @classmethod
     def close(cls, alias, delete):
-        connection = cls.get_by_alias(alias)
+        connection = cls._get_by_alias(alias)
         verbose_name = connection.verbose_name
 
         if cls.current.alias == alias:
