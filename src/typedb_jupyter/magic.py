@@ -39,9 +39,7 @@ class TypeDBMagic(Magics, Configurable):
         help="Create database when opening a connection if it does not already exist."
     )
 
-    @needs_local_scope
     @line_magic("typedb")
-    @cell_magic("typedb")
     @magic_arguments()
     @argument("-a", "--address", type=str, help="TypeDB server address for new connection.")
     @argument("-d", "--database", type=str, help="Database name for new connection.")
@@ -49,7 +47,8 @@ class TypeDBMagic(Magics, Configurable):
     @argument("-l", "--connections", action="store_true", help="List currently open connections.")
     @argument("-c", "--close", type=str, help="Close a connection by name.")
     @argument("-k", "--delete", type=str, help="Close a connection by name and delete its database.")
-    def execute(self, line="", cell="", local_ns=None):
+    def execute(self, line=""):
+
         args = parse_argstring(self.execute, line)
 
         if args.connections:
