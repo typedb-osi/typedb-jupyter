@@ -74,10 +74,10 @@ class TypeDBMagic(Magics, Configurable):
 
 @magics_class
 class TypeQLMagic(Magics, Configurable):
-    show_connection = Bool(
+    show_info = Bool(
         True,
         config=True,
-        help="Always show current connection name when executing a query."
+        help="Always show full connection information when executing a query."
     )
     strict_transactions = Bool(
         False,
@@ -119,11 +119,10 @@ class TypeQLMagic(Magics, Configurable):
         if not query.strip():
             raise ArgumentError("No query string supplied.")
 
-        if self.show_connection:
-            typedb_jupyter.connection.Connection.display()
-
         connection = typedb_jupyter.connection.Connection.get()
-        result = typedb_jupyter.query.run(connection, query, args, self.strict_transactions, self.global_inference)
+        result = typedb_jupyter.query.run(
+            connection, query, args, self.strict_transactions, self.global_inference, self.show_info
+        )
 
         if args.result:
             print("Returning data to local variable: '{}'".format(args.result))

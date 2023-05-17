@@ -24,7 +24,7 @@ class Connection(object):
         if not client.databases().contains(database):
             if create_database:
                 client.databases().create(database)
-                print("Created database: {}".format(self.name))
+                print("Created database: {}".format(self.database))
             else:
                 raise ArgumentError("Database with name '{}' does not exist and automatic database creation has been disabled.".format(database))
 
@@ -67,7 +67,7 @@ class Connection(object):
             if args.address is not None:
                 raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
             else:
-                cls.display()
+                print("Current connection: {}".format(cls._get_current().verbose_name))
 
         elif args.database is None:
             cls.current = cls._get_by_alias(args.alias)
@@ -87,19 +87,10 @@ class Connection(object):
     def get(cls):
         return cls._get_current()
 
-    @classmethod
-    def display(cls):
-        print("Current connection: {}".format(cls._get_current().verbose_name))
-
     def set_session(self, session_type):
         if self.session.session_type() != session_type:
             self.session.close()
             self.session = self.client.session(self.database, session_type)
-            if session_type == SessionType.SCHEMA:
-                session_arg = "schema"
-            else:
-                session_arg = "data"
-            print("Switched to {} session for connection: {}".format(session_arg, self.verbose_name))
             return
 
     @classmethod
@@ -129,7 +120,7 @@ class Connection(object):
         if delete:
             connection.session.close()
             connection.client.databases().get(connection.database).delete()
-            print("Deleted database: {}".format(connection.name))
+            print("Deleted database: {}".format(connection.database))
 
         del cls.connections[connection.name]
         print("Closed connection: {}".format(verbose_name))

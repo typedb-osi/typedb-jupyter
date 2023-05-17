@@ -10,6 +10,24 @@ from typedb.concept.answer.numeric_group import NumericGroup
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 
+def print_query_info(connection, session_type, transaction_type, query_type):
+    if session_type == SessionType.SCHEMA:
+        session_arg = "schema"
+    else:
+        session_arg = "data"
+    
+    if transaction_type == TransactionType.READ:
+        transaction_arg = "read"
+    else:
+        transaction_arg = "write"
+    
+    info = "Executing {} query using {}-{} transaction on connection: {}".format(
+        query_type, session_arg, transaction_arg, connection.verbose_name
+    )
+
+    print(info)
+
+
 def group_key(concept):
     if concept.is_type():
         return str(concept.as_type().get_label())
@@ -41,7 +59,7 @@ def decode(answer, answer_type):
         raise ValueError("Unknown answer type. Please report this error.")
 
 
-def run(connection, query, args, strict_transactions, global_inference):
+def run(connection, query, args, strict_transactions, global_inference, show_info):
     query = query.strip()
 
     if len(query) == 0:
@@ -83,11 +101,11 @@ def run(connection, query, args, strict_transactions, global_inference):
     candidate_query_types = list()
 
     if keyword_counts["group"] > 0 and aggregate_count > 0:
-        candidate_query_types.append("match_group_aggregate")
+        candidate_query_types.append("match-group-aggregate")
     elif aggregate_count > 0:
-        candidate_query_types.append("match_aggregate")
+        candidate_query_types.append("match-aggregate")
     elif keyword_counts["group"] > 0:
-        candidate_query_types.append("match_group")
+        candidate_query_types.append("match-group")
     elif keyword_counts["get"] > 0:
         candidate_query_types.append("match")
 
@@ -150,15 +168,18 @@ def run(connection, query, args, strict_transactions, global_inference):
 
     connection.set_session(session_type)
 
+    if show_info:
+        print_query_info(connection, session_type, transaction_type, query_type)
+
     try:
         with connection.session.transaction(transaction_type, options) as transaction:
             if query_type == "match":
                 results = decode(transaction.query().match(query), ConceptMap)
-            elif query_type == "match_aggregate":
+            elif query_type == "match-aggregate":
                 results = decode(transaction.query().match_aggregate(query).get(), Numeric)
-            elif query_type == "match_group":
+            elif query_type == "match-group":
                 results = decode(transaction.query().match_group(query), ConceptMapGroup)
-            elif query_type == "match_group_aggregate":
+            elif query_type == "match-group-aggregate":
                 results = decode(transaction.query().match_group_aggregate(query), NumericGroup)
             elif query_type == "define":
                 transaction.query().define(query)
@@ -179,7 +200,6 @@ def run(connection, query, args, strict_transactions, global_inference):
                 return results
     except TypeDBClientException as exception:
         if session_type == SessionType.SCHEMA:
-            print('Switching to data session due to failed schema query.')
             connection.set_session(SessionType.DATA)
 
         raise exception
