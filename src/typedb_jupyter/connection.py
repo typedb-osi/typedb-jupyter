@@ -7,7 +7,7 @@ class Connection(object):
     current = None
     connections = dict()
 
-    def __init__(self, address, database, alias, parallelisation, create_database):
+    def __init__(self, address, database, alias, create_database):
         self.address = address
         self.database = database
         self.name = "{}@{}".format(database, address)
@@ -19,10 +19,8 @@ class Connection(object):
             self.alias = alias
             self.verbose_name = "{} ({})".format(self.alias, self.name)
 
-        if parallelisation is None:
-            client = TypeDB.core_client(address)
-        else:
-            client = TypeDB.core_client(address, parallelisation)
+        client = TypeDB.core_client(address)
+
         if not client.databases().contains(database):
             if create_database:
                 client.databases().create(database)
@@ -82,7 +80,7 @@ class Connection(object):
             if "{}@{}".format(args.database, args.address) in cls.connections:
                 raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
 
-            cls.current = Connection(args.address, args.database, args.alias, args.parallelisation, create_database)
+            cls.current = Connection(args.address, args.database, args.alias, create_database)
             print("Opened connection: {}".format(cls.current.verbose_name))
 
     @classmethod

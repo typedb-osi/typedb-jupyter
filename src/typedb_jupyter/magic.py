@@ -49,7 +49,6 @@ class TypeDBMagic(Magics, Configurable):
     @argument("-l", "--connections", action="store_true", help="List currently open connections.")
     @argument("-c", "--close", type=str, help="Close a connection by name.")
     @argument("-k", "--delete", type=str, help="Close a connection by name and delete its database.")
-    @argument("-p", "--parallelisation", type=int, help="Number of server communication threads for new connection.")
     def execute(self, line="", cell="", local_ns=None):
         args = parse_argstring(self.execute, line)
 
