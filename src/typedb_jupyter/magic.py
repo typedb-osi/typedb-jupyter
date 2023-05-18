@@ -1,4 +1,3 @@
-import traceback
 from traitlets.config.configurable import Configurable
 from traitlets import Bool
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
@@ -6,7 +5,7 @@ from IPython.core.magic_arguments import argument, magic_arguments, parse_argstr
 from typedb.api.connection.credential import TypeDBCredential
 from typedb.client import TypeDB
 from typedb_jupyter.connection import Connection
-import typedb_jupyter.query
+from typedb_jupyter.query import Query
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 
@@ -140,13 +139,12 @@ class TypeQLMagic(Magics, Configurable):
             with open(args.file, "r") as infile:
                 query = infile.read() + "\n" + query
 
-        if not query.strip():
+        if query.strip() == "":
             raise ArgumentError("No query string supplied.")
 
         connection = Connection.get()
-        result = typedb_jupyter.query.run(
-            connection, query, args, self.strict_transactions, self.global_inference, self.show_info
-        )
+        query = Query(query, args.session, args.transaction, args.inference, self.strict_transactions, self.global_inference)
+        result = query.run(connection, self.show_info)
 
         if args.result:
             print("Returning data to local variable: '{}'".format(args.result))
