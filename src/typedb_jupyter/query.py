@@ -2,7 +2,6 @@ import math
 from typedb.client import TypeDBOptions
 from typedb.api.connection.session import SessionType
 from typedb.api.connection.transaction import TransactionType
-from typedb.common.exception import TypeDBClientException
 from typedb.concept.answer.concept_map import ConceptMap
 from typedb.concept.answer.concept_map_group import ConceptMapGroup
 from typedb.concept.answer.numeric import Numeric
@@ -222,8 +221,5 @@ class Query(object):
                     return
                 else:
                     return results
-        except TypeDBClientException as exception:
-            if self.session_type == SessionType.SCHEMA:
-                Connection.set_session(SessionType.DATA)
-
-            raise exception
+        finally:
+            Connection.set_session(SessionType.DATA)
