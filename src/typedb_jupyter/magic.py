@@ -3,8 +3,9 @@ from traitlets.config.configurable import Configurable
 from traitlets import Bool
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from typedb.common.exception import TypeDBClientException
-import typedb_jupyter.connection
+from typedb.api.connection.credential import TypeDBCredential
+from typedb.client import TypeDB
+from typedb_jupyter.connection import Connection
 import typedb_jupyter.query
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
@@ -54,16 +55,37 @@ class TypeDBMagic(Magics, Configurable):
         args = parse_argstring(self.execute, line)
 
         if args.list:
-            return typedb_jupyter.connection.Connection.list()
+            return Connection.list()
         elif args.delete:
-            return typedb_jupyter.connection.Connection.close(args.delete, delete=True)
+            return Connection.close(args.delete, delete=True)
         elif args.close:
-            return typedb_jupyter.connection.Connection.close(args.close, delete=False)
+            return Connection.close(args.close)
+        else:
+            cluster_args = (args.username, args.password, args.certificate)
 
-        try:
-            return typedb_jupyter.connection.Connection.set(args, self.create_database)
-        except TypeDBClientException:
-            print(traceback.format_exc())
+            if args.database is None:
+                if args.address is not None or not all(arg is None for arg in cluster_args):
+                    raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
+                elif args.alias is None:
+                    Connection.display()
+                else:
+                    Connection.select(args.alias)
+            else:
+                if all(arg is None for arg in cluster_args):
+                    client = TypeDB.core_client
+                    credential = None
+                elif all(arg is not None for arg in cluster_args):
+                    client = TypeDB.cluster_client
+                    credential = TypeDBCredential(args.username, args.password, args.certificate)
+                else:
+                    raise ArgumentError("Cannot open cluster connection without a username, password, and certificate path. Use -u, -p, and -c to specify these.")
+
+                if args.address is None:
+                    address = TypeDB.DEFAULT_ADDRESS
+                else:
+                    address = args.address
+
+                Connection.open(client, address, args.database, credential, args.alias, self.create_database)
             return
 
     def __init__(self, shell):
@@ -121,7 +143,7 @@ class TypeQLMagic(Magics, Configurable):
         if not query.strip():
             raise ArgumentError("No query string supplied.")
 
-        connection = typedb_jupyter.connection.Connection.get()
+        connection = Connection.get()
         result = typedb_jupyter.query.run(
             connection, query, args, self.strict_transactions, self.global_inference, self.show_info
         )

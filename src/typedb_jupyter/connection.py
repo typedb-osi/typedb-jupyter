@@ -1,4 +1,3 @@
-from typedb.api.connection.credential import TypeDBCredential
 from typedb.client import TypeDB
 from typedb.api.connection.session import SessionType
 from typedb_jupyter.exception import ArgumentError
@@ -44,17 +43,11 @@ class Connection(object):
             self.client.close()
 
     @classmethod
-    def _aliases(cls):
-        return [cls.connections[name].alias for name in cls.connections]
-
-    @classmethod
     def _get_current(cls):
         if len(cls.connections) == 0:
-            raise ArgumentError(
-                "No database connection exists. Use -a and -d to specify server address and database name.")
+            raise ArgumentError("No database connection exists. Use -a and -d to specify server address and database name.")
         elif cls.current is None:
-            raise ArgumentError(
-                "Current connection was closed. Use -l to list connections and -n to select connection.")
+            raise ArgumentError("Current connection was closed. Use -l to list connections and -n to select connection.")
 
         return cls.current
 
@@ -66,46 +59,28 @@ class Connection(object):
             raise ArgumentError("Connection name not recognised. Use -l to list connections.")
 
     @classmethod
-    def set(cls, args, create_database):
-        cluster_args = (args.username, args.password, args.certificate)
-
-        if args.database is None:
-            if args.address is not None or not all(arg is None for arg in cluster_args):
-                raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
-
-            if args.alias is None:
-                print("Current connection: {}".format(cls._get_current().verbose_name))
-            else:
-                cls.current = cls._get_by_alias(args.alias)
-                print("Selected connection: {}".format(cls.current.verbose_name))
+    def open(cls, client, address, database, credential, alias, create_database):
+        if "{}@{}".format(database, address) in cls.connections:
+            raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
         else:
-            if all(arg is None for arg in cluster_args):
-                client = TypeDB.core_client
-                credential = None
-            elif all(arg is not None for arg in cluster_args):
-                client = TypeDB.cluster_client
-                credential = TypeDBCredential(args.username, args.password, args.certificate)
-            else:
-                raise ArgumentError("Cannot open cluster connection without a username, password, and certificate path. Use -u, -p, and -c to specify these.")
-
-            if args.address is None:
-                args.address = TypeDB.DEFAULT_ADDRESS
-
-            if "{}@{}".format(args.database, args.address) in cls.connections:
-                raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
-
-            cls.current = Connection(client, args.address, args.database, credential, args.alias, create_database)
+            cls.current = Connection(client, address, database, credential, alias, create_database)
             print("Opened connection: {}".format(cls.current.verbose_name))
 
     @classmethod
-    def get(cls):
-        return cls._get_current()
+    def select(cls, alias):
+        cls.current = cls._get_by_alias(alias)
+        print("Selected connection: {}".format(cls.current.verbose_name))
 
-    def set_session(self, session_type):
-        if self.session.session_type() != session_type:
-            self.session.close()
-            self.session = self.client.session(self.database, session_type)
-            return
+    @classmethod
+    def get(cls, alias=None):
+        if alias is None:
+            return cls._get_current()
+        else:
+            return cls._get_by_alias(alias)
+
+    @classmethod
+    def display(cls):
+        print("Current connection: {}".format(cls._get_current().verbose_name))
 
     @classmethod
     def list(cls):
@@ -122,8 +97,15 @@ class Connection(object):
                 print("{}{}".format(prefix, cls.connections[name].verbose_name))
 
     @classmethod
-    def close(cls, alias, delete):
-        connection = cls._get_by_alias(alias)
+    def set_session(cls, session_type, alias=None):
+        connection = cls.get(alias)
+        if connection.session.session_type() != session_type:
+            connection.session.close()
+            connection.session = connection.client.session(connection.database, session_type)
+
+    @classmethod
+    def close(cls, alias=None, delete=False):
+        connection = cls.get(alias)
         verbose_name = connection.verbose_name
 
         if cls.current is not None and cls.current.alias == alias:

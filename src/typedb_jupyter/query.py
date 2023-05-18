@@ -7,6 +7,7 @@ from typedb.concept.answer.concept_map import ConceptMap
 from typedb.concept.answer.concept_map_group import ConceptMapGroup
 from typedb.concept.answer.numeric import Numeric
 from typedb.concept.answer.numeric_group import NumericGroup
+from typedb_jupyter.connection import Connection
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 
@@ -166,7 +167,7 @@ def run(connection, query, args, strict_transactions, global_inference, show_inf
     else:
         options = typedb.client.TypeDBOptions().core().set_infer(args.inference)
 
-    connection.set_session(session_type)
+    Connection.set_session(session_type)
 
     if show_info:
         print_query_info(connection, session_type, transaction_type, query_type)
@@ -200,6 +201,6 @@ def run(connection, query, args, strict_transactions, global_inference, show_inf
                 return results
     except TypeDBClientException as exception:
         if session_type == SessionType.SCHEMA:
-            connection.set_session(SessionType.DATA)
+            Connection.set_session(SessionType.DATA)
 
         raise exception
