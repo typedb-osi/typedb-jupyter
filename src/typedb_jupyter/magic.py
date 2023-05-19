@@ -103,7 +103,7 @@ class TypeDBMagic(Magics, Configurable):
 class TypeQLMagic(Magics, Configurable):
     show_info = Bool(
         True,
-        config=True,
+        config=Tre,
         help="Always show full connection information when executing a query."
     )
     strict_transactions = Bool(
