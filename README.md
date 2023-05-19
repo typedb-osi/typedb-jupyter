@@ -192,7 +192,7 @@ To execute a query in a stored TypeQL file, supply the filepath with:
 Rule inference is disabled by default. It can be enabled for a query with:
 
 ```
-%typeql -i True <tql>
+%typeql -i True <typeql string>
 ```
 
 In order to enable rule inference globally, see the [Configuring options](#configuring-options)
@@ -223,7 +223,7 @@ the client:
 - Only one schema write transaction can be opened at any time.
 
 This means that, when a `define` or `undefine` query is executed in a notebook, this will interfere with queries
-performed by other users.
+performed by other users on the same database.
 
 ## Configuring options
 
