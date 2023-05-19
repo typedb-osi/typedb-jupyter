@@ -1,3 +1,4 @@
+import re
 from traitlets.config.configurable import Configurable
 from traitlets import Bool
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
@@ -46,7 +47,7 @@ class TypeDBMagic(Magics, Configurable):
     @argument("-u", "--username", type=str, help="Username for new Cloud/Cluster connection.")
     @argument("-p", "--password", type=str, help="Password for new Cloud/Cluster connection.")
     @argument("-c", "--certificate", type=str, help="TLS certificate path for new Cloud/Cluster connection.")
-    @argument("-n", "--alias", type=str, help="Alias for new connection, or alias of existing connection to select.")
+    @argument("-n", "--alias", type=str, help="Custom alias for new connection, or alias of existing connection to select.")
     @argument("-l", "--list", action="store_true", help="List currently open connections.")
     @argument("-k", "--close", type=str, help="Close a connection by name.")
     @argument("-x", "--delete", type=str, help="Close a connection by name and delete its database.")
@@ -78,6 +79,9 @@ class TypeDBMagic(Magics, Configurable):
                     credential = TypeDBCredential(args.username, args.password, args.certificate)
                 else:
                     raise ArgumentError("Cannot open cluster connection without a username, password, and certificate path. Use -u, -p, and -c to specify these.")
+
+                if args.alias is not None and not re.fullmatch(r"[a-zA-Z0-9-_]+", args.alias):
+                    raise ArgumentError("Custom aliases can only contains alphanumeric characters, hyphens, and underscores.")
 
                 if args.address is None:
                     address = TypeDB.DEFAULT_ADDRESS
