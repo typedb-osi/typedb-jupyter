@@ -43,6 +43,10 @@ class Connection(object):
             self.client.close()
 
     @classmethod
+    def _get_aliases(cls):
+        return [cls.connections[name].alias for name in cls.connections]
+
+    @classmethod
     def _get_current(cls):
         if len(cls.connections) == 0:
             raise ArgumentError("No database connection exists. Use -a and -d to specify server address and database name.")
@@ -62,6 +66,8 @@ class Connection(object):
     def open(cls, client, address, database, credential, alias, create_database):
         if "{}@{}".format(database, address) in cls.connections:
             raise ArgumentError("Cannot open more than one connection to the same database. Use -c to close opened connection first.")
+        elif alias in cls._get_aliases():
+            raise ArgumentError("Cannot open more than one connection with the same alias. Use -c to close opened connection first.")
         else:
             cls.current = Connection(client, address, database, credential, alias, create_database)
             print("Opened connection: {}".format(cls.current.verbose_name))
