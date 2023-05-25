@@ -44,8 +44,57 @@ class Query(object):
             self.infer = inference_arg
 
     @staticmethod
+    def _get_query_args(query):
+        # Warning: This method is experimental and not guaranteed to always function correctly. Copy at your own risk.
+
+        in_escape = False
+        in_literal = False
+        in_comment = False
+        literal_delimiter = None
+        arg_string = ""
+
+        for char in query:
+            if in_escape:
+                in_escape = False
+                arg_string += " "
+                continue
+
+            if in_literal and char == "\\":
+                in_escape = True
+                arg_string += " "
+                continue
+
+            if not in_comment and char in ("\"", "'"):
+                if not in_literal:
+                    in_literal = True
+                    literal_delimiter = char
+                    arg_string += " "
+                    continue
+                if in_literal and char == literal_delimiter:
+                    in_literal = False
+                    arg_string += " "
+                    continue
+
+            if not in_literal:
+                if char == "#":
+                    in_comment = True
+                    arg_string += " "
+                    continue
+                if in_comment and char == "\n":
+                    in_comment = False
+                    arg_string += " "
+                    continue
+
+            if not in_literal and not in_comment:
+                arg_string += char
+
+        return arg_string.replace(",", " ").replace(";", " ").split()
+
+    @staticmethod
     def _get_query_type(query):
-        query_args = "".join(query.split("\"")[::2]).replace(";", "").split()
+        # Warning: This method is experimental and not guaranteed to always function correctly. Copy at your own risk.
+
+        query_args = Query._get_query_args(query)
 
         keyword_counts = {
             "match": 0,
