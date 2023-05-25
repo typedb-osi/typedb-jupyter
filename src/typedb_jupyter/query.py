@@ -86,9 +86,12 @@ class Query(object):
                     continue
 
             if not in_literal and not in_comment:
-                arg_string += char
+                if char in (",", ";"):
+                    arg_string += " "
+                else:
+                    arg_string += char
 
-        return arg_string.replace(",", " ").replace(";", " ").split()
+        return arg_string.split()
 
     @staticmethod
     def _get_query_type(query):
