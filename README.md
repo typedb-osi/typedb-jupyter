@@ -1,7 +1,13 @@
 # TypeDB Jupyter connector
 
 Runs TypeQL statements against a TypeDB database from a Jupyter notebook using the `%typedb` and `%typeql` IPython magic
-commands.
+commands. Includes:
+- Full support for TypeDB Core and Cluster.
+- Ability to manage multiple concurrent connections.
+- Automatic session and transaction handling.
+- JSON-style output for all read queries.
+- Variable interpolation from the Jupyter namespace.
+- Query reading from supplied filepaths.
 
 ## Getting started
 
