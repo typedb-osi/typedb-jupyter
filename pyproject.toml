@@ -28,6 +28,6 @@ dependencies = [
 
 [project.urls]
 "Repository" = "https://github.com/typedb-osi/typedb-jupyter"
-"Release notes" = "https://github.com/typedb-osi/typedb-jupyter/blob/main/RELEASE_NOTES.md"
+"Release notes" = "https://github.com/typedb-osi/typedb-jupyter/blob/master/RELEASE_NOTES.md"
 "TypeDB" = "https://github.com/vaticle/typedb"
 "Vaticle" = "https://vaticle.com/"
