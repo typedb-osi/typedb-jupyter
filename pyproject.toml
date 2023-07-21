@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "typedb-client~=2.17",
+    "typedb-client~=2.18",
     "ipython"
 ]
 
