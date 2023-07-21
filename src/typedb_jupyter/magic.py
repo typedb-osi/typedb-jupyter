@@ -38,6 +38,9 @@ def substitute_vars(query, local_ns):
         return query
 
     for var in query_vars:
+        if var.strip()[-1] == ";":
+            continue
+
         try:
             val = local_ns[var]
         except KeyError:
