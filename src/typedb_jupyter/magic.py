@@ -145,12 +145,13 @@ class TypeQLMagic(Magics, Configurable):
     @line_magic("typeql")
     @cell_magic("typeql")
     @magic_arguments()
-    @argument("line", default="", nargs="*", type=str, help="Valid TypeQL string.")
-    @argument("-r", "--result", type=str, help="Assign query result to the named variable instead of printing.")
+    @argument("line", nargs="*", type=str, default="", help="Valid TypeQL string.")
+    @argument("-r", "--result", type=str, help="Assign read query results to the named variable instead of printing.")
     @argument("-f", "--file", type=str, help="Read in query from a TypeQL file at the specified path.")
     @argument("-i", "--inference", type=bool, help="Enable (True) or disable (False) rule inference for query.")
     @argument("-s", "--session", type=str, help="Force a particular session type for query, 'schema' or 'data'.")
     @argument("-t", "--transaction", type=str, help="Force a particular transaction type for query, 'read' or 'write'.")
+    @argument("-o", "--output", type=str, default="json", help="Output format for read query results.")
     def execute(self, line="", cell="", local_ns=None):
         if local_ns is None:
             local_ns = {}
@@ -172,15 +173,21 @@ class TypeQLMagic(Magics, Configurable):
 
         connection = Connection.get()
         query = Query(query, args.session, args.transaction, args.inference, self.strict_transactions, self.global_inference)
-        result = query.run(connection, self.show_info)
+        response = query.run(connection, args.output, self.show_info)
 
-        if args.result:
-            print("Returning data to local variable: '{}'".format(args.result))
-            self.shell.user_ns.update({args.result: result})
+        if response.message is not None:
+            print(response.message)
+
+        if response.result is not None:
+            if args.result:
+                print("Returning data to local variable: '{}'".format(args.result))
+                self.shell.user_ns.update({args.result: response.result})
+                return
+
+            # Return results into the default ipython _ variable
+            return response.result
+        else:
             return
-
-        # Return results into the default ipython _ variable
-        return result
 
     def __init__(self, shell):
         Configurable.__init__(self, config=shell.config)

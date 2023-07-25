@@ -19,16 +19,12 @@
 # under the License.
 #
 
-import math
 from typedb.client import TypeDBOptions
 from typedb.api.connection.session import SessionType
 from typedb.api.connection.transaction import TransactionType
-from typedb.concept.answer.concept_map import ConceptMap
-from typedb.concept.answer.concept_map_group import ConceptMapGroup
-from typedb.concept.answer.numeric import Numeric
-from typedb.concept.answer.numeric_group import NumericGroup
 from typedb_jupyter.connection import Connection
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
+from typedb_jupyter.response import Response
 
 
 class Query(object):
@@ -229,38 +225,7 @@ class Query(object):
 
         print(info)
 
-    @staticmethod
-    def _group_key(concept):
-        if concept.is_type():
-            return str(concept.as_type().get_label())
-        elif concept.is_entity():
-            return concept.as_entity().get_iid()
-        elif concept.is_relation():
-            return concept.as_relation().get_iid()
-        elif concept.is_attribute():
-            return concept.as_attribute().get_value()
-        else:
-            raise ValueError("Unknown concept type. Please report this error.")
-
-    @staticmethod
-    def _parse_answer(answer, answer_type):
-        if answer_type is ConceptMap:
-            return [concept_map.to_json() for concept_map in answer]
-        elif answer_type is ConceptMapGroup:
-            return {Query._group_key(map_group.owner()): Query._parse_answer(map_group.concept_maps(), ConceptMap) for map_group in answer}
-        elif answer_type is Numeric:
-            if answer.is_int():
-                return answer.as_int()
-            elif answer.is_float():
-                return answer.as_float()
-            else:
-                return math.nan
-        elif answer_type is NumericGroup:
-            return {Query._group_key(numeric_group.owner()): Query._parse_answer(numeric_group.numeric(), Numeric) for numeric_group in answer}
-        else:
-            raise ValueError("Unknown answer type. Please report this error.")
-
-    def run(self, connection, show_info):
+    def run(self, connection, output_format, show_info):
         Connection.set_session(self.session_type)
         options = self._get_options(connection)
 
@@ -270,29 +235,29 @@ class Query(object):
         try:
             with connection.session.transaction(self.transaction_type, options) as transaction:
                 if self.query_type == "match":
-                    results = self._parse_answer(transaction.query().match(self.query), ConceptMap)
+                    answer = transaction.query().match(self.query)
                 elif self.query_type == "match-aggregate":
-                    results = self._parse_answer(transaction.query().match_aggregate(self.query).get(), Numeric)
+                    answer = transaction.query().match_aggregate(self.query).get()
                 elif self.query_type == "match-group":
-                    results = self._parse_answer(transaction.query().match_group(self.query), ConceptMapGroup)
+                    answer = transaction.query().match_group(self.query)
                 elif self.query_type == "match-group-aggregate":
-                    results = self._parse_answer(transaction.query().match_group_aggregate(self.query), NumericGroup)
+                    answer = transaction.query().match_group_aggregate(self.query)
                 elif self.query_type == "define":
-                    transaction.query().define(self.query)
+                    answer = transaction.query().define(self.query)
                 elif self.query_type == "undefine":
-                    transaction.query().undefine(self.query)
+                    answer = transaction.query().undefine(self.query)
                 elif self.query_type == "insert":
-                    transaction.query().insert(self.query)
+                    answer = transaction.query().insert(self.query)
                 elif self.query_type == "delete":
-                    transaction.query().delete(self.query)
+                    answer = transaction.query().delete(self.query)
                 elif self.query_type == "update":
-                    transaction.query().update(self.query)
+                    answer = transaction.query().update(self.query)
+
+                response = Response(self, answer, output_format, transaction)
 
                 if self.transaction_type == TransactionType.WRITE:
                     transaction.commit()
-                    print('{} query success.'.format(self.query_type.title()))
-                    return
-                else:
-                    return results
+
+                return response
         finally:
             Connection.set_session(SessionType.DATA)

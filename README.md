@@ -266,7 +266,7 @@ The following tables list the arguments that can be provided to the `%typedb` an
 | `%typedb`     | `-l`                    | List currently open connections.                                            |
 | `%typedb`     | `-k <connection name>`  | Close a connection by name.                                                 |
 | `%typedb`     | `-x <connection name>`  | Close a connection by name and delete its database.                         |
-| `%typeql`     | `-r <variable name>`    | Assign query result to the named variable instead of printing.              |
+| `%typeql`     | `-r <variable name>`    | Assign read query results to the named variable instead of printing.        |
 | `%typeql`     | `-f <file path>`        | Read in query from a TypeQL file at the specified path.                     |
 | `%typeql`     | `-i <inference option>` | Enable (`True`) or disable (`False`) rule inference for query.              |
 | `%typeql`     | `-s <session type>`     | Force a particular session type for query, `schema` or `data`.              |

@@ -1,5 +1,13 @@
 # TypeDB Jupyter connector
 
+## Version 0.4
+- A TypeQL output format has been added for `match` queries. The TypeQL returned contains all the necessary information
+to reconstruct the original query in a new database. To do so: commit the same schema used for the initial database,
+then place the returned TypeQL in an insert query and run it. When the original query is run on the new database, the
+same results will be returned as with the initial database. This output format is not available for queries with `group`
+or `aggregate` modifiers. 
+- Fixed bug in parsing of queries containing sub-pattern blocks (disjunctions and negations).
+
 ## Version 0.3
 
 - The `%tql` magic command has been replaced with two new ones: `%typedb` and `%typeql`. `%typedb` is used for opening 
