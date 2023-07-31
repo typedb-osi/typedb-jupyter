@@ -161,6 +161,8 @@ class Response(object):
                 if "value" in concept.keys():
                     if concept["value-type"] == "string":
                         lines.append("${} \"{}\";".format(binding, concept["value"]))
+                    elif concept["value-type"] == "datetime":
+                        lines.append("${} {};".format(binding, str(concept["value"]).replace(" ", "T")))
                     else:
                         lines.append("${} {};".format(binding, concept["value"]))
 
