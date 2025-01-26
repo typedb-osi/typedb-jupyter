@@ -136,7 +136,7 @@ class TypeQLMagic(Magics, Configurable):
         from typedb.concept.answer.concept_row_iterator import ConceptRowIterator
         from typedb.concept.answer.concept_document_iterator import ConceptDocumentIterator
         from typedb.concept.answer.ok_query_answer import OkQueryAnswer
-        from typedb_jupyter.display import print_rows, print_documents
+        from typedb_jupyter.utils.display import print_rows, print_documents
         if answer_type == OkQueryAnswer:
             print("Query completed successfully! (No results to show)")
         elif answer_type == ConceptDocumentIterator:
