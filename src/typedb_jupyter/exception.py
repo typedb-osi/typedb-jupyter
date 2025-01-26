@@ -25,3 +25,14 @@ class ArgumentError(ValueError):
 
 class QueryParsingError(ValueError):
     pass
+
+class ConnectionError(BaseException):
+    pass
+
+
+class CommandParsingError(BaseException):
+    def __init__(self, what, msg):
+        BaseException.__init__(self)
+        self.what = what
+        self.msg = msg
+

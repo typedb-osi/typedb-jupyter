@@ -1,5 +1,8 @@
 # TypeDB Jupyter connector
 
+## Version 0.5
+- Bump TypeDB Driver dependency to 2.28.4. 
+
 ## Version 0.4
 - A TypeQL output format has been added for `match` queries. The TypeQL returned contains all the necessary information
 to reconstruct the original query in a new database. To do so: commit the same schema used for the initial database,
