@@ -29,31 +29,6 @@ from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
 import typedb_jupyter.subcommands as subcommands
 
-def substitute_vars(query, local_ns):
-    try:
-        query_vars = "".join(query.split("\"")[::2]).replace("{", "}").split("}")[1::2]
-    except IndexError:
-        return query
-
-    for var in query_vars:
-        if var.strip()[-1] == ";":
-            continue
-
-        try:
-            val = local_ns[var]
-        except KeyError:
-            raise QueryParsingError("No variable found in local namespace with name: {}".format(var))
-
-        if type(val) is str:
-            val = "\"{}\"".format(val.replace("\"", "'"))
-        else:
-            val = str(val)
-
-        query = query.replace("{" + var + "}", val)
-
-    return query
-
-
 @magics_class
 class TypeDBMagic(Magics, Configurable):
     create_database = Bool(
@@ -108,6 +83,8 @@ class TypeQLMagic(Magics, Configurable):
         help="Enable rule inference for all queries. Can be overridden per query with -i."
     )
 
+    QUERY_RESULT_VARIABLE = "_typeql_result"
+
     @needs_local_scope
     @cell_magic("typeql")
     @magic_arguments()
@@ -117,7 +94,6 @@ class TypeQLMagic(Magics, Configurable):
 
         args = parse_argstring(self.execute, line)
         query = cell
-        query = substitute_vars(query, local_ns)
 
         # Save globals and locals, so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
@@ -129,8 +105,10 @@ class TypeQLMagic(Magics, Configurable):
         connection = Connection.get()
         tx = connection.get_active_transaction()
         answer_type, answer = self._run_query(tx, query)
-        self._print_answer(answer_type, answer)
-        return answer
+        self._print_answers(answer_type, answer)
+
+        self.shell.user_ns.update({self.QUERY_RESULT_VARIABLE: answer})
+        return "Stored result in variable: {}".format(self.QUERY_RESULT_VARIABLE)
 
     def __init__(self, shell):
         Configurable.__init__(self, config=shell.config)
@@ -147,28 +125,23 @@ class TypeQLMagic(Magics, Configurable):
         if answer.is_concept_rows():
             return (ConceptRowIterator, list(answer.as_concept_rows()))
         elif answer.is_concept_documents():
-            return (ConceptDocumentIterator, list(answer.as_concept_documents))
+            return (ConceptDocumentIterator, list(answer.as_concept_documents()))
         elif answer.is_ok():
             return (OkQueryAnswer, None)
         else:
             raise NotImplementedError("Unhandled answer type")
 
 
-    def _print_answer(self, answer_type, answer):
+    def _print_answers(self, answer_type, answer):
         from typedb.concept.answer.concept_row_iterator import ConceptRowIterator
         from typedb.concept.answer.concept_document_iterator import ConceptDocumentIterator
         from typedb.concept.answer.ok_query_answer import OkQueryAnswer
+        from typedb_jupyter.display import print_rows, print_documents
         if answer_type == OkQueryAnswer:
             print("Query completed successfully! (No results to show)")
         elif answer_type == ConceptDocumentIterator:
-            self._print_documents(answer)
+            print_documents(answer)
         elif answer_type == ConceptRowIterator:
-            self._print_rows(answer)
+            print_rows(answer)
         else:
             raise NotImplementedError("Unhandled answer type")
-
-    def _print_documents(self, documents):
-        print("TODO: Print documents")
-
-    def _print_rows(self, rows):
-        print("TODO: Print rows")

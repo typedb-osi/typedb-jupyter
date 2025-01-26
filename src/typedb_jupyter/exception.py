@@ -36,3 +36,10 @@ class CommandParsingError(BaseException):
         self.what = what
         self.msg = msg
 
+def is_typedb_jupyter_exception(err):
+    return (
+        isinstance(err, ArgumentError) or
+        isinstance(err, ConnectionError) or
+        isinstance(err, CommandParsingError) or
+        isinstance(err, QueryParsingError)
+    )
