@@ -171,18 +171,17 @@ class TypeQLVisitor(NodeVisitor):
         # print("Generic visit for ", node)
         return visited_children or None
 
+if __name__ == "__main__":
+    input = """
+    match
+    $x isa cow, has name "Spider Georg";
+    $y isa cow, has name "Spider Georg";
+    $z isa marriage, links (man: $x);
+    """
 
-input = """
-match
-$x isa cow, has name "Spider Georg";
-$y isa cow, has name "Spider Georg";
-$z isa marriage, links (man: $x);
-"""
-
-tree = TypeQLVisitor.GRAMMAR.parse(input)
-# print(tree)
-
-print("=====")
-visitor = TypeQLVisitor()
-visited = visitor.visit(tree)
-print("\n----\n".join((str(v) for v in visited )))
+    tree = TypeQLVisitor.GRAMMAR.parse(input)
+    # print(tree)
+    # print("=====")
+    visitor = TypeQLVisitor()
+    visited = visitor.visit(tree)
+    print("\n----\n".join((str(v) for v in visited )))

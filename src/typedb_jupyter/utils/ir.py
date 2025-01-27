@@ -79,7 +79,8 @@ class Has(BinaryConstraint):
         super().__init__(lhs, rhs)
 
 class Links(BinaryConstraint):
-    def __init__(self, lhs: Var, rhs: Var, role): # role would ideally be Var, but we don't have a rolename keyword
+    # TODO: role would ideally be Var, but we don't have a rolename keyword
+    def __init__(self, lhs: Var, rhs: Var, role):
         super().__init__(lhs, rhs)
         self.role = role
 

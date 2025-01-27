@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "typedb-driver~=3.0.2",
+    "netgraph~=4.13.2",
     "ipython"
 ]
 

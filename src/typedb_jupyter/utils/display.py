@@ -42,3 +42,7 @@ def print_documents(documents):
         print("Query returned {} documents.".format(len(documents)))
         for document in documents:
             print(dumps(document, indent=2))
+
+def display_graph(graph):
+    for edge in graph:
+        
