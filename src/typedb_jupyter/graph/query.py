@@ -23,7 +23,8 @@ from abc import abstractmethod
 
 from typedb_jupyter.utils.ir import Var, Label, Literal, Comparator, \
     Isa, Has, Links, IsaType, AttributeLabelValue, Comparison, Assign
-from typedb_jupyter.graph.answer import HasEdge, LinksEdge
+from typedb_jupyter.graph.answer import HasEdge, LinksEdge, \
+    EntityVertex, RelationVertex, AttributeVertex
 
 class QueryGraphEdge:
     def __init__(self, lhs: Var, rhs: Var):
@@ -44,7 +45,16 @@ class QueryHasEdge(QueryGraphEdge):
         super().__init__(lhs, rhs)
 
     def get_answer_edge(self, row):
-        return HasEdge(row.get(self.lhs.name), row.get(self.rhs.name))
+        owner = row.get(self.lhs.name)
+        if owner.is_entity():
+            lhs = EntityVertex(owner)
+        else:
+            assert owner.is_relation()
+            lhs = RelationVertex(owner)
+
+        assert row.get(self.rhs.name).is_attribute()
+        rhs = AttributeVertex(row.get(self.rhs.name).is_attribute())
+        return HasEdge(lhs, rhs)
 
     def __str__(self):
         return "{}({}, {})".format(self.__class__.__name__, self.lhs, self.rhs)
@@ -56,7 +66,18 @@ class QueryLinksEdge(QueryGraphEdge):
         self.role = role
 
     def get_answer_edge(self, row):
-        return LinksEdge(row.get(self.lhs), row.get(self.rhs), row.get(self.role))
+        assert row.get(self.lhs).is_relation()
+        rhs = RelationVertex(row.get(self.lhs))
+        role = str(row.get(self.role))
+
+        player = row.get(self.rhs.name)
+        if player.is_entity():
+            lhs = EntityVertex(player)
+        else:
+            assert player.is_relation()
+            lhs = RelationVertex(player)
+
+        return LinksEdge(lhs, rhs, role)
 
     def __str__(self):
         return "{}({}, {}, {})".format(self.__class__.__name__, self.lhs, self.rhs, self.role)

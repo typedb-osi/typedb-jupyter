@@ -26,13 +26,33 @@ class AnswerGraph:
         self.edges = edges
 
     def draw(self):
-        from netgraph import InteractiveGraph
+        from netgraph import Graph
         # TODO: derive edges, node_shape, node_labels, node_colors from  from edge.lhs & edge.rhs
-        edges = []
-        plot_instance = InteractiveGraph(edges)
-        plt.show()
+        plottable = PlottableGraphBuilder()
+        for edge in self.edges:
+            plottable.add_edge(edge)
+        plot_instance = Graph(
+            plottable.edges,
+            edge_labels=plottable.edge_labels,
+            node_shape=plottable.node_shapes,
+            node_color=plottable.node_colours,
+            node_labels=plottable.node_labels,
+            arrows=True,
+            node_label_offset=0.075
+        )
 
 class AnswerVertex:
+    def __init__(self, vertex):
+        self.vertex = vertex
+
+    def __str__(self):
+        return str(self.vertex)
+
+    def __hash__(self):
+        return self.vertex.__hash__()
+
+    def __eq__(self, other):
+        return self.vertex.__eq__(other.vertex)
 
     @classmethod
     @abstractmethod
@@ -41,8 +61,8 @@ class AnswerVertex:
 
     @classmethod
     @abstractmethod
-    def color(cls):
-        return cls._COLOR
+    def colour(cls):
+        return cls._COLOUR
 
     @abstractmethod
     def label(self):
@@ -50,27 +70,33 @@ class AnswerVertex:
 
 class RelationVertex(AnswerVertex):
     _SHAPE = "o"
+    _COLOUR = "green"
     def __init__(self, relation):
-        self.relation = relation
+        super().__init__(relation)
 
     def label(self):
-        return "TODO_RELATION"
+        return str(self)
 
 
 class EntityVertex(AnswerVertex):
+    _SHAPE = "o"
+    _COLOUR = "green"
     def __init__(self, entity):
-        self.entity = entity
+        super().__init__(entity)
 
     def label(self):
-        return "TODO_ENTITY"
+        return str(self)
 
 
 class AttributeVertex(AnswerVertex):
+    _SHAPE = "s"
+    _COLOUR = "green"
+
     def __init__(self, attribute):
-        self.attribute = attribute
+        super().__init__(attribute)
 
     def label(self):
-        return "TODO_ATTRIBUTE"
+        return str(self)
 
 class AnswerEdge:
     def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex):
@@ -120,6 +146,29 @@ class AnswerGraphBuilder:
         for query_edge in self.query_graph.edges:
             edge = query_edge.get_answer_edge(row)
             self.edges.append(edge)
+
+
+class PlottableGraphBuilder:
+    def __init__(self):
+        self.edges = []
+        self.edge_labels = {}
+        self.node_shapes = {}
+        self.node_colours = {}
+        self.node_labels= {}
+
+    def add_edge(self, edge: AnswerEdge):
+        self.edges.append((edge.lhs, edge.rhs))
+        self.edge_labels[(edge.lhs, edge.rhs)] = edge.label()
+        self.node_shapes[edge.lhs] = edge.lhs.shape()
+        self.node_shapes[edge.rhs] = edge.rhs.shape()
+
+        self.node_colours[edge.lhs] = edge.lhs.colour()
+        self.node_colours[edge.rhs] = edge.rhs.colour()
+
+        self.node_labels[edge.lhs] = edge.lhs.label()
+        self.node_labels[edge.rhs] = edge.rhs.label()
+
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
