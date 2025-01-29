@@ -19,44 +19,60 @@
 # under the License.
 #
 
-from ir import Var, Label, Literal, Comparator, \
-    Isa, Has, Links, IsaType, AttributeLabelValue, Comparison, Assign
 from abc import abstractmethod
 
+from typedb_jupyter.utils.ir import Var, Label, Literal, Comparator, \
+    Isa, Has, Links, IsaType, AttributeLabelValue, Comparison, Assign
+from typedb_jupyter.graph.answer import HasEdge, LinksEdge
 
 class QueryGraphEdge:
-    def __init__(self, left:Var, right:Var):
-        self.left = left
-        self.right = right
+    def __init__(self, lhs: Var, rhs: Var):
+        self.lhs = lhs
+        self.rhs = rhs
+
 
     @abstractmethod
-    def label(self):
+    def get_answer_edge(self, row):
         raise NotImplementedError("abstract")
 
     @abstractmethod
-    def left_shape(self):
+    def __str__(self):
         raise NotImplementedError("abstract")
-
-    @abstractmethod
-    def right_shape(self):
-        raise NotImplementedError("abstract")
-
-
-    def get_answer_edges(self, row):
-        return ()
 
 class QueryHasEdge(QueryGraphEdge):
-    def label(self):
-        return "has"
+    def __init__(self, lhs, rhs):
+        super().__init__(lhs, rhs)
 
-    def shape(self):
+    def get_answer_edge(self, row):
+        return HasEdge(row.get(self.lhs.name), row.get(self.rhs.name))
+
+    def __str__(self):
+        return "{}({}, {})".format(self.__class__.__name__, self.lhs, self.rhs)
+
+
+class QueryLinksEdge(QueryGraphEdge):
+    def __init__(self, lhs, rhs, role):
+        super().__init__(lhs, rhs)
+        self.role = role
+
+    def get_answer_edge(self, row):
+        return LinksEdge(row.get(self.lhs), row.get(self.rhs), row.get(self.role))
+
+    def __str__(self):
+        return "{}({}, {}, {})".format(self.__class__.__name__, self.lhs, self.rhs, self.role)
+
+class QueryGraph:
+    def __init__(self, query: "typedb_jupyter.utils.ir.Match"):
+        self.edges = lazy_query_graph(query.constraints)
+
+
 
 def lazy_query_graph(constraints):
-    graph = []
+    edges = []
     for c in constraints:
         if isinstance(c, Has):
-            graph.append(QueryGraphEdge(c.lhs, "has", c.rhs))
+            edges.append(QueryHasEdge(c.lhs, c.rhs))
         elif isinstance(c, Links):
-            graph.append(QueryGraphEdge(c.lhs, c.role, c.rhs))
-    return graph
+            edges.append(QueryLinksEdge(c.lhs, c.rhs, c.role))
+    return edges
 

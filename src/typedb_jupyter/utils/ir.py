@@ -18,6 +18,14 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
+class Match:
+    def __init__(self, constraints):
+        self.constraints = constraints
+
+    def __str__(self):
+        return "Match(%s)"%(", ".join(str(c) for c in self.constraints))
+
 class Label:
     def __init__(self, name):
         self.name = name
@@ -28,7 +36,7 @@ class Label:
 class Var:
     _INTERNAL = 0
     def __init__(self, name):
-        self.name = name
+        self.name = name.lstrip("$")
 
     @classmethod
     def next_internal(cls):

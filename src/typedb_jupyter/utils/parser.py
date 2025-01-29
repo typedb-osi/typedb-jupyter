@@ -19,20 +19,12 @@
 # under the License.
 #
 
-
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node, NodeVisitor
 
-from ir import Var, Label, Literal, Comparator, \
+from typedb_jupyter.utils.ir import Match, \
+    Var, Label, Literal, Comparator, \
     Isa, Has, Links, IsaType, AttributeLabelValue, Comparison, Assign
-
-class Match:
-    def __init__(self, constraints):
-        self.constraints = constraints
-
-
-    def __str__(self):
-        return "Match(%s)"%(", ".join(str(c) for c in self.constraints))
 
 
 def flatten(l):
@@ -81,6 +73,15 @@ class TypeQLVisitor(NodeVisitor):
         ws = ~"\s*"
     """)
 
+    @classmethod
+    def parse_and_visit(cls, input: str):
+        tree = TypeQLVisitor.GRAMMAR.parse(input)
+        visitor = TypeQLVisitor()
+        return visitor.visit(tree)[1]
+
+    def visit_query(self, node:Node, visited_children):
+        return non_null(flatten(visited_children[1]))
+
     def visit_ws(self, node:Node, visited_children):
         return
 
@@ -115,10 +116,8 @@ class TypeQLVisitor(NodeVisitor):
         children = non_null(flatten(visited_children))
         edges = []
         u = children[0]
-        # print("U was ", u)
         for constraint in children[1:]:
             constraint.may_set_lhs(u)
-            # print("Child is", child)
             edges.append(constraint)
         return edges
 
@@ -141,7 +140,6 @@ class TypeQLVisitor(NodeVisitor):
 
     def visit_role_player(self, node: Node, visited_children):
         [role, player] = non_null(flatten(visited_children))
-        print((role, player))
         if isinstance(role, Var):
             return [Links(None, player, role)]
         else:
@@ -168,7 +166,6 @@ class TypeQLVisitor(NodeVisitor):
 
     def generic_visit(self, node:Node, visited_children):
         """ The generic visit method. """
-        # print("Generic visit for ", node)
         return visited_children or None
 
 if __name__ == "__main__":
@@ -178,10 +175,5 @@ if __name__ == "__main__":
     $y isa cow, has name "Spider Georg";
     $z isa marriage, links (man: $x);
     """
-
-    tree = TypeQLVisitor.GRAMMAR.parse(input)
-    # print(tree)
-    # print("=====")
-    visitor = TypeQLVisitor()
-    visited = visitor.visit(tree)
-    print("\n----\n".join((str(v) for v in visited )))
+    visited = TypeQLVisitor.parse_and_visit(input)
+    print(visited)

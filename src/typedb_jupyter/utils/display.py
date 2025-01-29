@@ -43,6 +43,6 @@ def print_documents(documents):
         for document in documents:
             print(dumps(document, indent=2))
 
-def display_graph(graph):
-    for edge in graph:
-        
+# def display_graph(graph):
+#     for edge in graph:
+#

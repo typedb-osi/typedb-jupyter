@@ -21,6 +21,17 @@
 
 from abc import abstractmethod
 
+class AnswerGraph:
+    def __init__(self, edges):
+        self.edges = edges
+
+    def draw(self):
+        from netgraph import InteractiveGraph
+        # TODO: derive edges, node_shape, node_labels, node_colors from  from edge.lhs & edge.rhs
+        edges = []
+        plot_instance = InteractiveGraph(edges)
+        plt.show()
+
 class AnswerVertex:
 
     @classmethod
@@ -62,13 +73,16 @@ class AttributeVertex(AnswerVertex):
         return "TODO_ATTRIBUTE"
 
 class AnswerEdge:
-    def __init__(self, left: AnswerVertex, right: AnswerVertex):
-        self.left = left
-        self.right = right
+    def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex):
+        self.lhs = lhs
+        self.rhs = rhs
 
     @abstractmethod
     def label(self):
         raise NotImplementedError("abstract")
+
+    def __str__(self):
+        return "{}--[{}]-->{}".format(self.lhs, self.label(), self.rhs)
 
 class HasEdge(AnswerEdge):
     def label(self):
@@ -76,35 +90,36 @@ class HasEdge(AnswerEdge):
 
 
 class LinksEdge(AnswerEdge):
-    def __init__(self, left: AnswerVertex, right: AnswerVertex, role):
-        super().__init__(left, right)
+    def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex, role: AnswerVertex):
+        super().__init__(lhs, rhs)
         self.role = role
+
     def label(self):
         return str(self.role) # TODO
 
+
 class AnswerGraphBuilder:
+
     def __init__(self, query_graph):
+        self.query_graph = query_graph
         self.edges = []
-        self.query_graph = AnswerGraphBuilder._filter_visualisable_edges(query_graph)
-        self.answer_edges = []
-        self.edge_labels = []
+
+    @classmethod
+    def build(cls, query_graph, answers):
+        relevant_edges = cls._filter_visualisable_edges(query_graph)
+        builder = AnswerGraphBuilder(query_graph)
+        for row in answers:
+            builder._add_answer_row(row)
+        return AnswerGraph(builder.edges)
 
     @classmethod
     def _filter_visualisable_edges(cls, query_graph):
         query_graph # TODO
 
-    def add_answer_row(self, row):
-        for query_edge in self.query_graph:
-            edge = query_edge.get_answer_edges(row)
-            self.answer_edges.append((edge.left, edge.right))
-            self.edge_labels.append(edge.label)
-
-    def draw(self):
-        from netgraph import InteractiveGraph
-        # TODO: derive node_shape, node_labels, node_colors from  from edge.left & edge.right
-        plot_instance = InteractiveGraph(self.answer_edges)
-        plt.show()
-
+    def _add_answer_row(self, row):
+        for query_edge in self.query_graph.edges:
+            edge = query_edge.get_answer_edge(row)
+            self.edges.append(edge)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
