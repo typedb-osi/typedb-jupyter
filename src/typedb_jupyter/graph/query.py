@@ -66,9 +66,9 @@ class QueryLinksEdge(QueryGraphEdge):
         self.role = role
 
     def get_answer_edge(self, row):
-        assert row.get(self.lhs).is_relation()
-        rhs = RelationVertex(row.get(self.lhs))
-        role = str(row.get(self.role))
+        assert row.get(self.lhs.name).is_relation()
+        rhs = RelationVertex(row.get(self.lhs.name))
+        role = str(row.get(self.role.name))
 
         player = row.get(self.rhs.name)
         if player.is_entity():

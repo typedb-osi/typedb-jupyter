@@ -58,7 +58,7 @@ class TypeQLVisitor(NodeVisitor):
         has_labelled = "has" ws label ws (var / literal)    
         has = "has" ws var
     
-        links = "links" ws "(" ws role_player ws ( "," ws constraint ws)* ")"
+        links = "links" ws "(" ws role_player ws ( "," ws role_player ws)* ")"
         isa = "isa" ws (label/var)
         
         role_player = (var/label) ws ":" ws var
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     match
     $x isa cow, has name "Spider Georg";
     $y isa cow, has name "Spider Georg";
-    $z isa marriage, links (man: $x);
+    $z isa marriage, links (man: $x, woman: $y);
     """
     visited = TypeQLVisitor.parse_and_visit(input)
     print(visited)
