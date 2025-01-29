@@ -53,7 +53,7 @@ class QueryHasEdge(QueryGraphEdge):
             lhs = RelationVertex(owner)
 
         assert row.get(self.rhs.name).is_attribute()
-        rhs = AttributeVertex(row.get(self.rhs.name).is_attribute())
+        rhs = AttributeVertex(row.get(self.rhs.name))
         return HasEdge(lhs, rhs)
 
     def __str__(self):
