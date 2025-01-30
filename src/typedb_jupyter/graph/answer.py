@@ -68,6 +68,16 @@ class AnswerVertex:
     def label(self):
         raise NotImplementedError("abstract")
 
+    @classmethod
+    def trim_iid(cls, iid):
+        full_iid =  str(iid)
+        thing_id = full_iid[4:]
+        trimmed = thing_id.lstrip("0")
+        if len(trimmed) < 2:
+            return thing_id[-2:]
+        else:
+            return trimmed
+
 class RelationVertex(AnswerVertex):
     _SHAPE = "d"
     _COLOUR = "yellow"
@@ -75,7 +85,8 @@ class RelationVertex(AnswerVertex):
         super().__init__(relation)
 
     def label(self):
-        return str(self)
+        trimmed_iid = self.__class__.trim_iid(self.vertex.get_iid())
+        return "{}[{}]".format(self.vertex.get_type().get_label(), trimmed_iid)
 
 
 class EntityVertex(AnswerVertex):
@@ -85,7 +96,8 @@ class EntityVertex(AnswerVertex):
         super().__init__(entity)
 
     def label(self):
-        return str(self.vertex.get_type().get_label())
+        trimmed_iid = self.__class__.trim_iid(self.vertex.get_iid())
+        return "{}[{}]".format(self.vertex.get_type().get_label(), trimmed_iid)
 
 
 class AttributeVertex(AnswerVertex):
