@@ -46,6 +46,10 @@ class SubCommandBase(abc.ABC):
     def name(cls):
         return str(cls.get_parser().prog)
 
+    @classmethod
+    def print_help(cls):
+        print(cls.get_parser().format_help())
+
 class Connect(SubCommandBase):
     _PARSER = None
     @classmethod
@@ -56,11 +60,11 @@ class Connect(SubCommandBase):
                 description='Establishes the connection to TypeDB'
             )
             parser.exit = parser_exit_override
-            parser.add_argument("action", choices=["open", "close"])
-            parser.add_argument("kind", choices=["core", "cluster"])
-            parser.add_argument("address", default="127.0.0.1:1729")
-            parser.add_argument("username", default = "admin")
-            parser.add_argument("password", default = "password")
+            parser.add_argument("action", choices=["open", "close", "help"])
+            parser.add_argument("kind", nargs='?', choices=["core", "cluster"])
+            parser.add_argument("address", nargs='?', default="127.0.0.1:1729")
+            parser.add_argument("username", nargs='?', default = "admin")
+            parser.add_argument("password", nargs='?', default = "password")
             cls._PARSER = parser
         return cls._PARSER
 
@@ -71,7 +75,9 @@ class Connect(SubCommandBase):
         from typedb_jupyter.connection import Connection
 
         cmd = cls.get_parser().parse_args(args)
-        if cmd.action == "open":
+        if cmd.action == "help":
+            cls.print_help()
+        elif cmd.action == "open":
             driver = TypeDB.cloud_driver if cmd.kind == "cluster" else TypeDB.core_driver
             credential = Credentials(cmd.username, cmd.password)
             Connection.open(driver, cmd.address, credential)
@@ -79,7 +85,6 @@ class Connect(SubCommandBase):
             Connection.close()
         else:
             raise NotImplementedError("Unimplemented for action: ", cmd.action)
-
 
 
 class Database(SubCommandBase):
@@ -92,7 +97,7 @@ class Database(SubCommandBase):
                 description='Database management'
             )
             parser.exit = parser_exit_override
-            parser.add_argument("action", choices=["create", "recreate", "list", "delete", "schema"])
+            parser.add_argument("action", choices=["create", "recreate", "list", "delete", "schema", "help"])
             parser.add_argument("name", nargs='?')
             cls._PARSER = parser
         return cls._PARSER
@@ -104,7 +109,9 @@ class Database(SubCommandBase):
         cmd = cls.get_parser().parse_args(args)
 
         driver = Connection.get().driver
-        if cmd.action == "create":
+        if cmd.action == "help":
+            cls.print_help()
+        elif cmd.action == "create":
             driver.databases.create(cmd.name)
             print("Created database ", cmd.name)
         elif cmd.action == "recreate":
@@ -135,7 +142,7 @@ class Transaction(SubCommandBase):
                 description='Opens or closes a transaction to a database on the active connection'
             )
             parser.exit = parser_exit_override
-            parser.add_argument("action", choices=["open", "close", "commit", "rollback"])
+            parser.add_argument("action", choices=["open", "close", "commit", "rollback", "help"])
             parser.add_argument("database", nargs='?', help="Only for 'open'")
             parser.add_argument("tx_type", nargs='?', choices=["schema", "write", "read"], help="Only for 'open'")
             cls._PARSER = parser
@@ -154,7 +161,9 @@ class Transaction(SubCommandBase):
         cmd = cls.get_parser().parse_args(args)
 
         connection = Connection.get()
-        if cmd.action == "open":
+        if cmd.action == "help":
+            cls.print_help()
+        elif cmd.action == "open":
             if cmd.database is None or cmd.tx_type is None:
                 raise ArgumentError("transaction open database tx_type")
             connection.open_transaction(cmd.database, cls.TX_TYPE_MAP[cmd.tx_type])
@@ -189,7 +198,10 @@ class Help(SubCommandBase):
     def execute(cls, args):
         print("Available commands:", ", ".join(AVAILABLE_COMMANDS.keys()))
         if not (len(args) > 0 and args[0] == "short"):
-            print("TODO: Print subcommand help")
+            for subcommand in AVAILABLE_COMMANDS.values():
+                print("-"*80)
+                print("Help for command '%s':"%subcommand.name())
+                subcommand.print_help()
 
 
 AVAILABLE_COMMANDS  = {

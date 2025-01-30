@@ -69,8 +69,8 @@ class AnswerVertex:
         raise NotImplementedError("abstract")
 
 class RelationVertex(AnswerVertex):
-    _SHAPE = "o"
-    _COLOUR = "green"
+    _SHAPE = "d"
+    _COLOUR = "yellow"
     def __init__(self, relation):
         super().__init__(relation)
 
@@ -79,24 +79,24 @@ class RelationVertex(AnswerVertex):
 
 
 class EntityVertex(AnswerVertex):
-    _SHAPE = "o"
-    _COLOUR = "green"
+    _SHAPE = "s"
+    _COLOUR = "pink"
     def __init__(self, entity):
         super().__init__(entity)
 
     def label(self):
-        return str(self)
+        return str(self.vertex.get_type().get_label())
 
 
 class AttributeVertex(AnswerVertex):
-    _SHAPE = "s"
+    _SHAPE = "o"
     _COLOUR = "green"
 
     def __init__(self, attribute):
         super().__init__(attribute)
 
     def label(self):
-        return str(self)
+        return "{}:{}".format(self.vertex.get_type().get_label(), self.vertex.get_value())
 
 class AnswerEdge:
     def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex):
@@ -116,12 +116,12 @@ class HasEdge(AnswerEdge):
 
 
 class LinksEdge(AnswerEdge):
-    def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex, role: AnswerVertex):
+    def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex, role):
         super().__init__(lhs, rhs)
         self.role = role
 
     def label(self):
-        return str(self.role) # TODO
+        return self.role.get_label().split(":")[1]
 
 
 class AnswerGraphBuilder:
