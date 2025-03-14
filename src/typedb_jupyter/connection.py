@@ -25,12 +25,12 @@ from typedb_jupyter.exception import ArgumentError, ConnectionError
 class Connection(object):
     current = None
 
-    def __init__(self, driver, address, credential):
+    def __init__(self, driver, address, credential, tls_enabled):
         self.address = address
         if driver is TypeDB.core_driver:
-            self.driver = TypeDB.core_driver(address, credential, DriverOptions())
+            self.driver = TypeDB.core_driver(address, credential, DriverOptions(tls_enabled))
         elif driver is TypeDB.cloud_driver:
-            self.driver = TypeDB.cloud_driver(address, credential, DriverOptions())
+            self.driver = TypeDB.cloud_driver(address, credential, DriverOptions(tls_enabled))
         else:
             raise ValueError("Unknown client type. Please report this error.")
         self.active_transaction = None
@@ -42,9 +42,9 @@ class Connection(object):
         self.driver.close()
 
     @classmethod
-    def open(cls, client, address, credential):
+    def open(cls, client, address, credential, tls_enabled):
         if cls.current is None:
-            cls.current = Connection(client, address, credential)
+            cls.current = Connection(client, address, credential, tls_enabled)
             print("Opened connection to: {}".format(cls.current.address))
         else:
             raise ArgumentError("Cannot open more than one connection. Use `connection close` to close opened connection first.")

@@ -65,6 +65,7 @@ class Connect(SubCommandBase):
             parser.add_argument("address", nargs='?', default="127.0.0.1:1729")
             parser.add_argument("username", nargs='?', default = "admin")
             parser.add_argument("password", nargs='?', default = "password")
+            parser.add_argument("--tls-enabled",  action="store_true", help="Use for encrypted servers")
             cls._PARSER = parser
         return cls._PARSER
 
@@ -80,7 +81,7 @@ class Connect(SubCommandBase):
         elif cmd.action == "open":
             driver = TypeDB.cloud_driver if cmd.kind == "cluster" else TypeDB.core_driver
             credential = Credentials(cmd.username, cmd.password)
-            Connection.open(driver, cmd.address, credential)
+            Connection.open(driver, cmd.address, credential, bool(cmd.tls_enabled))
         elif cmd.action == "close":
             Connection.close()
         else:
