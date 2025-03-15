@@ -25,13 +25,13 @@ class AnswerGraph:
     def __init__(self, edges):
         self.edges = edges
 
-    def draw(self):
-        from netgraph import Graph
+    def plot(self):
+        from netgraph import InteractiveGraph
         # TODO: derive edges, node_shape, node_labels, node_colors from  from edge.lhs & edge.rhs
         plottable = PlottableGraphBuilder()
         for edge in self.edges:
             plottable.add_edge(edge)
-        plot_instance = Graph(
+        return InteractiveGraph(
             plottable.edges,
             edge_labels=plottable.edge_labels,
             node_shape=plottable.node_shapes,
