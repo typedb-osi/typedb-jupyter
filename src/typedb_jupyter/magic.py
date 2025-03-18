@@ -84,6 +84,7 @@ class TypeQLMagic(Magics, Configurable):
     )
 
     QUERY_RESULT_VARIABLE = "_typeql_result"
+    QUERY_STRING_VARIABLE = "_typeql_query_string"
 
     @needs_local_scope
     @cell_magic("typeql")
@@ -99,7 +100,7 @@ class TypeQLMagic(Magics, Configurable):
         user_ns = self.shell.user_ns.copy()
         user_ns.update(local_ns)
 
-        if query.strip() == "":
+        if not query.strip():
             raise ArgumentError("No query string supplied.")
 
         connection = Connection.get()
@@ -108,7 +109,8 @@ class TypeQLMagic(Magics, Configurable):
         self._print_answers(answer_type, answer)
 
         self.shell.user_ns.update({self.QUERY_RESULT_VARIABLE: answer})
-        return "Stored result in variable: {}".format(self.QUERY_RESULT_VARIABLE)
+        self.shell.user_ns.update({self.QUERY_STRING_VARIABLE: query})
+        return answer
 
     def __init__(self, shell):
         Configurable.__init__(self, config=shell.config)

@@ -132,53 +132,72 @@ class IGraphVisualisationBuilder:
     def __init__(self):
         raise NotImplementedError("abstract")
 
-    def add_entity_vertex(self, vertex: EntityVertex):
+    def notify_start_next_answer(self, index: int):
+        pass
+
+    @abstractmethod
+    def add_entity_vertex(self, answer_index: int, vertex: EntityVertex):
         raise NotImplementedError("abstract")
 
-    def add_relation_vertex(self, vertex: RelationVertex):
+    @abstractmethod
+    def add_relation_vertex(self, answer_index: int, vertex: RelationVertex):
         raise NotImplementedError("abstract")
 
-    def add_attribute_vertex(self, vertex: AttributeVertex):
+    @abstractmethod
+    def add_attribute_vertex(self, answer_index: int, vertex: AttributeVertex):
         raise NotImplementedError("abstract")
 
-    def add_has_edge(self, edge: HasEdge):
+    @abstractmethod
+    def add_has_edge(self, answer_index: int, edge: HasEdge):
         raise NotImplementedError("abstract")
 
-    def add_links_edge(self, edge: LinksEdge):
+    @abstractmethod
+    def add_links_edge(self, answer_index: int, edge: LinksEdge):
         raise NotImplementedError("abstract")
 
-    def plot(self) -> "Any":
+    @abstractmethod
+    def plot(self) -> Any:
         raise NotImplementedError("abstract")
+
 
 class AnswerGraph:
-    def __init__(self, edges: List[AnswerEdge]):
+    def __init__(self, edges: List[List[AnswerEdge]]):
         self.edges = edges
 
+    @classmethod
+    def build(cls, query_graph, answers):
+        builder = AnswerGraphBuilder(query_graph)
+        for row in answers:
+            builder._add_answer_row(row)
+        return AnswerGraph(builder.answer_edges)
+
     def plot(self):
-        self.plot_with_visualiser(PlottableGraphBuilder())
+        return self.plot_with_visualiser(PlottableGraphBuilder())
 
     def plot_with_visualiser(self, visualiser: IGraphVisualisationBuilder):
-        for edge in self.edges:
-            self._plot_vertex(visualiser, edge.lhs)
-            self._plot_vertex(visualiser, edge.rhs)
-            self._plot_edge(visualiser, edge)
+        for (index, edge_list) in enumerate(self.edges):
+            visualiser.notify_start_next_answer(index)
+            for edge in edge_list:
+                self._plot_vertex(visualiser, index, edge.lhs)
+                self._plot_vertex(visualiser, index, edge.rhs)
+                self._plot_edge(visualiser, index, edge)
         return visualiser.plot()
 
-    def _plot_vertex(self, visualiser: IGraphVisualisationBuilder, vertex: AnswerVertex):
+    def _plot_vertex(self, visualiser: IGraphVisualisationBuilder, index: int, vertex: AnswerVertex):
         if isinstance(vertex, EntityVertex):
-            visualiser.add_entity_vertex(vertex)
+            visualiser.add_entity_vertex(index, vertex)
         elif isinstance(vertex, RelationVertex):
-            visualiser.add_relation_vertex(vertex)
+            visualiser.add_relation_vertex(index, vertex)
         elif isinstance(vertex, AttributeVertex):
-            visualiser.add_attribute_vertex(vertex)
+            visualiser.add_attribute_vertex(index, vertex)
         else:
             raise ValueError(f"Unknown vertex type: {vertex}")
 
-    def _plot_edge(self, visualiser: IGraphVisualisationBuilder, edge: AnswerEdge):
+    def _plot_edge(self, visualiser: IGraphVisualisationBuilder, index: int, edge: AnswerEdge):
         if isinstance(edge, HasEdge):
-            visualiser.add_has_edge(edge)
+            visualiser.add_has_edge(index, edge)
         elif isinstance(edge, LinksEdge):
-            visualiser.add_links_edge(edge)
+            visualiser.add_links_edge(index, edge)
         else:
             raise ValueError(f"Unknown edge type: {edge}")
 
@@ -186,24 +205,18 @@ class AnswerGraph:
 class AnswerGraphBuilder:
     def __init__(self, query_graph):
         self.query_graph = query_graph
-        self.edges = []
+        self.answer_edges = []
 
-    @classmethod
-    def build(cls, query_graph, answers):
-        relevant_edges = cls._filter_visualisable_edges(query_graph)
-        builder = AnswerGraphBuilder(query_graph)
-        for row in answers:
-            builder._add_answer_row(row)
-        return AnswerGraph(builder.edges)
-
-    @classmethod
-    def _filter_visualisable_edges(cls, query_graph):
-        query_graph # TODO
+    #
+    # @classmethod
+    # def _filter_visualisable_edges(cls, query_graph):
+    #     query_graph # TODO
 
     def _add_answer_row(self, row):
+        this_answer_edges = []
         for query_edge in self.query_graph.edges:
-            edge = query_edge.get_answer_edge(row)
-            self.edges.append(edge)
+            this_answer_edges.append(query_edge.get_answer_edge(row))
+        self.answer_edges.append(this_answer_edges)
 
 
 class PlottableGraphBuilder(IGraphVisualisationBuilder):
@@ -224,19 +237,19 @@ class PlottableGraphBuilder(IGraphVisualisationBuilder):
         self.node_labels[vertex] = vertex.label()
 
 
-    def add_entity_vertex(self, vertex: EntityVertex):
+    def add_entity_vertex(self, answer_index: int, vertex: EntityVertex):
         self._add_vertex_defaults(vertex)
 
-    def add_relation_vertex(self, vertex: RelationVertex):
+    def add_relation_vertex(self, answer_index: int, vertex: RelationVertex):
         self._add_vertex_defaults(vertex)
 
-    def add_attribute_vertex(self, vertex: AttributeVertex):
+    def add_attribute_vertex(self, answer_index: int, vertex: AttributeVertex):
         self._add_vertex_defaults(vertex)
 
-    def add_has_edge(self, edge: HasEdge):
+    def add_has_edge(self, answer_index: int, edge: HasEdge):
         self._add_edge_defaults(edge)
 
-    def add_links_edge(self, edge: LinksEdge):
+    def add_links_edge(self, answer_index: int, edge: LinksEdge):
         self._add_edge_defaults(edge)
 
     def plot(self):
