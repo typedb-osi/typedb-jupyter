@@ -20,27 +20,12 @@
 #
 
 from abc import abstractmethod
+from typing import List, Any
 
-class AnswerGraph:
-    def __init__(self, edges):
-        self.edges = edges
 
-    def plot(self):
-        from netgraph import InteractiveGraph
-        # TODO: derive edges, node_shape, node_labels, node_colors from  from edge.lhs & edge.rhs
-        plottable = PlottableGraphBuilder()
-        for edge in self.edges:
-            plottable.add_edge(edge)
-        return InteractiveGraph(
-            plottable.edges,
-            edge_labels=plottable.edge_labels,
-            node_shape=plottable.node_shapes,
-            node_color=plottable.node_colours,
-            node_labels=plottable.node_labels,
-            arrows=True,
-            node_label_offset=0.075
-        )
-
+############
+# Vertices #
+############
 class AnswerVertex:
     def __init__(self, vertex):
         self.vertex = vertex
@@ -110,6 +95,9 @@ class AttributeVertex(AnswerVertex):
     def label(self):
         return "{}:{}".format(self.vertex.get_type().get_label(), self.vertex.get_value())
 
+#########
+# Edges #
+#########
 class AnswerEdge:
     def __init__(self, lhs: AnswerVertex, rhs: AnswerVertex):
         self.lhs = lhs
@@ -135,9 +123,67 @@ class LinksEdge(AnswerEdge):
     def label(self):
         return self.role.get_label().split(":")[1]
 
+##########
+# Graphs #
+##########
+class IGraphVisualisationBuilder:
+
+    @abstractmethod
+    def __init__(self):
+        raise NotImplementedError("abstract")
+
+    def add_entity_vertex(self, vertex: EntityVertex):
+        raise NotImplementedError("abstract")
+
+    def add_relation_vertex(self, vertex: RelationVertex):
+        raise NotImplementedError("abstract")
+
+    def add_attribute_vertex(self, vertex: AttributeVertex):
+        raise NotImplementedError("abstract")
+
+    def add_has_edge(self, edge: HasEdge):
+        raise NotImplementedError("abstract")
+
+    def add_links_edge(self, edge: LinksEdge):
+        raise NotImplementedError("abstract")
+
+    def plot(self) -> "Any":
+        raise NotImplementedError("abstract")
+
+class AnswerGraph:
+    def __init__(self, edges: List[AnswerEdge]):
+        self.edges = edges
+
+    def plot(self):
+        self.plot_with_visualiser(PlottableGraphBuilder())
+
+    def plot_with_visualiser(self, visualiser: IGraphVisualisationBuilder):
+        for edge in self.edges:
+            self._plot_vertex(visualiser, edge.lhs)
+            self._plot_vertex(visualiser, edge.rhs)
+            self._plot_edge(visualiser, edge)
+        return visualiser.plot()
+
+    def _plot_vertex(self, visualiser: IGraphVisualisationBuilder, vertex: AnswerVertex):
+        if isinstance(vertex, EntityVertex):
+            visualiser.add_entity_vertex(vertex)
+        elif isinstance(vertex, RelationVertex):
+            visualiser.add_relation_vertex(vertex)
+        elif isinstance(vertex, AttributeVertex):
+            visualiser.add_attribute_vertex(vertex)
+        else:
+            raise ValueError(f"Unknown vertex type: {vertex}")
+
+    def _plot_edge(self, visualiser: IGraphVisualisationBuilder, edge: AnswerEdge):
+        if isinstance(edge, HasEdge):
+            visualiser.add_has_edge(edge)
+        elif isinstance(edge, LinksEdge):
+            visualiser.add_links_edge(edge)
+        else:
+            raise ValueError(f"Unknown edge type: {edge}")
+
 
 class AnswerGraphBuilder:
-
     def __init__(self, query_graph):
         self.query_graph = query_graph
         self.edges = []
@@ -160,7 +206,7 @@ class AnswerGraphBuilder:
             self.edges.append(edge)
 
 
-class PlottableGraphBuilder:
+class PlottableGraphBuilder(IGraphVisualisationBuilder):
     def __init__(self):
         self.edges = []
         self.edge_labels = {}
@@ -168,26 +214,47 @@ class PlottableGraphBuilder:
         self.node_colours = {}
         self.node_labels= {}
 
-    def add_edge(self, edge: AnswerEdge):
+    def _add_edge_defaults(self, edge: AnswerEdge):
         self.edges.append((edge.lhs, edge.rhs))
         self.edge_labels[(edge.lhs, edge.rhs)] = edge.label()
-        self.node_shapes[edge.lhs] = edge.lhs.shape()
-        self.node_shapes[edge.rhs] = edge.rhs.shape()
 
-        self.node_colours[edge.lhs] = edge.lhs.colour()
-        self.node_colours[edge.rhs] = edge.rhs.colour()
-
-        self.node_labels[edge.lhs] = edge.lhs.label()
-        self.node_labels[edge.rhs] = edge.rhs.label()
+    def _add_vertex_defaults(self, vertex: AnswerVertex):
+        self.node_shapes[vertex] = vertex.shape()
+        self.node_colours[vertex] = vertex.colour()
+        self.node_labels[vertex] = vertex.label()
 
 
+    def add_entity_vertex(self, vertex: EntityVertex):
+        self._add_vertex_defaults(vertex)
+
+    def add_relation_vertex(self, vertex: RelationVertex):
+        self._add_vertex_defaults(vertex)
+
+    def add_attribute_vertex(self, vertex: AttributeVertex):
+        self._add_vertex_defaults(vertex)
+
+    def add_has_edge(self, edge: HasEdge):
+        self._add_edge_defaults(edge)
+
+    def add_links_edge(self, edge: LinksEdge):
+        self._add_edge_defaults(edge)
+
+    def plot(self):
+        from netgraph import InteractiveGraph
+        return InteractiveGraph(
+            self.edges,
+            edge_labels=self.edge_labels,
+            node_shape=self.node_shapes,
+            node_color=self.node_colours,
+            node_labels=self.node_labels,
+            arrows=True,
+            node_label_offset=0.075
+        )
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from netgraph import Graph, InteractiveGraph, EditableGraph
+    from netgraph import InteractiveGraph
     graph_data = [("a", "b"), ("b", "c")]
-    # Graph(graph_data)
-    # plt.show()
     node_shapes = { "a" : "o", "b" : "s", "c": "o"}
     plot_instance = InteractiveGraph(graph_data, node_shape=node_shapes)
     plt.show()
