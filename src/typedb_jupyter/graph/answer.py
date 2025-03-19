@@ -22,13 +22,20 @@
 from abc import abstractmethod
 from typing import List, Any
 
-
 ############
 # Vertices #
 ############
 class AnswerVertex:
+    _SHAPE = None
+    _COLOUR = None
     def __init__(self, vertex):
         self.vertex = vertex
+
+    def iid(self):
+        return self.vertex.get_iid()
+
+    def type(self):
+        return self.vertex.get_type().get_label()
 
     def __str__(self):
         return str(self.vertex)
@@ -41,16 +48,16 @@ class AnswerVertex:
 
     @classmethod
     @abstractmethod
-    def shape(cls):
+    def _default_shape(cls):
         return cls._SHAPE
 
     @classmethod
     @abstractmethod
-    def colour(cls):
+    def _default_colour(cls):
         return cls._COLOUR
 
     @abstractmethod
-    def label(self):
+    def _default_label(self):
         raise NotImplementedError("abstract")
 
     @classmethod
@@ -69,7 +76,7 @@ class RelationVertex(AnswerVertex):
     def __init__(self, relation):
         super().__init__(relation)
 
-    def label(self):
+    def _default_label(self):
         trimmed_iid = self.__class__.trim_iid(self.vertex.get_iid())
         return "{}[{}]".format(self.vertex.get_type().get_label(), trimmed_iid)
 
@@ -80,7 +87,7 @@ class EntityVertex(AnswerVertex):
     def __init__(self, entity):
         super().__init__(entity)
 
-    def label(self):
+    def _default_label(self):
         trimmed_iid = self.__class__.trim_iid(self.vertex.get_iid())
         return "{}[{}]".format(self.vertex.get_type().get_label(), trimmed_iid)
 
@@ -92,8 +99,11 @@ class AttributeVertex(AnswerVertex):
     def __init__(self, attribute):
         super().__init__(attribute)
 
-    def label(self):
+    def _default_label(self):
         return "{}:{}".format(self.vertex.get_type().get_label(), self.vertex.get_value())
+
+    def iid(self):
+        return self.vertex.get_value()
 
 #########
 # Edges #
@@ -104,14 +114,14 @@ class AnswerEdge:
         self.rhs = rhs
 
     @abstractmethod
-    def label(self):
+    def _default_label(self):
         raise NotImplementedError("abstract")
 
     def __str__(self):
-        return "{}--[{}]-->{}".format(self.lhs, self.label(), self.rhs)
+        return "{}--[{}]-->{}".format(self.lhs, self._default_label(), self.rhs)
 
 class HasEdge(AnswerEdge):
-    def label(self):
+    def _default_label(self):
         return "has"
 
 
@@ -120,7 +130,10 @@ class LinksEdge(AnswerEdge):
         super().__init__(lhs, rhs)
         self.role = role
 
-    def label(self):
+    def role(self):
+        self.role.get_label()
+
+    def _default_label(self):
         return self.role.get_label().split(":")[1]
 
 ##########
@@ -229,12 +242,12 @@ class PlottableGraphBuilder(IGraphVisualisationBuilder):
 
     def _add_edge_defaults(self, edge: AnswerEdge):
         self.edges.append((edge.lhs, edge.rhs))
-        self.edge_labels[(edge.lhs, edge.rhs)] = edge.label()
+        self.edge_labels[(edge.lhs, edge.rhs)] = edge._default_label()
 
     def _add_vertex_defaults(self, vertex: AnswerVertex):
-        self.node_shapes[vertex] = vertex.shape()
-        self.node_colours[vertex] = vertex.colour()
-        self.node_labels[vertex] = vertex.label()
+        self.node_shapes[vertex] = vertex._SHAPE
+        self.node_colours[vertex] = vertex._COLOUR
+        self.node_labels[vertex] = vertex._default_label()
 
 
     def add_entity_vertex(self, answer_index: int, vertex: EntityVertex):
