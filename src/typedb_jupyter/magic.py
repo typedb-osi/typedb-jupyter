@@ -24,34 +24,10 @@ from traitlets.config.configurable import Configurable
 from traitlets import Bool
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from typedb.api.connection.credential import TypeDBCredential
-from typedb.client import TypeDB
 from typedb_jupyter.connection import Connection
-from typedb_jupyter.query import Query
 from typedb_jupyter.exception import ArgumentError, QueryParsingError
 
-
-def substitute_vars(query, local_ns):
-    try:
-        query_vars = "".join(query.split("\"")[::2]).replace("{", "}").split("}")[1::2]
-    except IndexError:
-        return query
-
-    for var in query_vars:
-        try:
-            val = local_ns[var]
-        except KeyError:
-            raise QueryParsingError("No variable found in local namespace with name: {}".format(var))
-
-        if type(val) is str:
-            val = "\"{}\"".format(val.replace("\"", "'"))
-        else:
-            val = str(val)
-
-        query = query.replace("{" + var + "}", val)
-
-    return query
-
+import typedb_jupyter.subcommands as subcommands
 
 @magics_class
 class TypeDBMagic(Magics, Configurable):
@@ -61,56 +37,25 @@ class TypeDBMagic(Magics, Configurable):
         help="Create database when opening a connection if it does not already exist."
     )
 
+
     @line_magic("typedb")
-    @magic_arguments()
-    @argument("-a", "--address", type=str, help="TypeDB server address for new connection.")
-    @argument("-d", "--database", type=str, help="Database name for new connection.")
-    @argument("-u", "--username", type=str, help="Username for new Cloud/Cluster connection.")
-    @argument("-p", "--password", type=str, help="Password for new Cloud/Cluster connection.")
-    @argument("-c", "--certificate", type=str, help="TLS certificate path for new Cloud/Cluster connection.")
-    @argument("-n", "--alias", type=str, help="Custom alias for new connection, or alias of existing connection to select.")
-    @argument("-l", "--list", action="store_true", help="List currently open connections.")
-    @argument("-k", "--close", type=str, help="Close a connection by name.")
-    @argument("-x", "--delete", type=str, help="Close a connection by name and delete its database.")
     def execute(self, line=""):
-        args = parse_argstring(self.execute, line)
-
-        if args.list:
-            return Connection.list()
-        elif args.delete:
-            return Connection.close(args.delete, delete=True)
-        elif args.close:
-            return Connection.close(args.close)
-        else:
-            cluster_args = (args.username, args.password, args.certificate)
-
-            if args.database is None:
-                if args.address is not None or not all(arg is None for arg in cluster_args):
-                    raise ArgumentError("Cannot open connection without a database name. Use -d to specify database.")
-                elif args.alias is None:
-                    Connection.display()
-                else:
-                    Connection.select(args.alias)
+        args = line.split(" ")
+        if len(args) > 0:
+            command_name = args[0].lower()
+            if command_name in subcommands.AVAILABLE_COMMANDS:
+                subcommand = subcommands.AVAILABLE_COMMANDS[args[0]]
             else:
-                if all(arg is None for arg in cluster_args):
-                    client = TypeDB.core_client
-                    credential = None
-                elif all(arg is not None for arg in cluster_args):
-                    client = TypeDB.cluster_client
-                    credential = TypeDBCredential(args.username, args.password, args.certificate)
-                else:
-                    raise ArgumentError("Cannot open cluster connection without a username, password, and certificate path. Use -u, -p, and -c to specify these.")
+                print("Unrecognised command: ", args[0])
+                subcommand = subcommands.Help
+        else:
+            subcommand = subcommands.Help
 
-                if args.alias is not None and not re.fullmatch(r"[a-zA-Z0-9-_]+", args.alias):
-                    raise ArgumentError("Custom aliases can only contains alphanumeric characters, hyphens, and underscores.")
-
-                if args.address is None:
-                    address = TypeDB.DEFAULT_ADDRESS
-                else:
-                    address = args.address
-
-                Connection.open(client, address, args.database, credential, args.alias, self.create_database)
-            return
+        try:
+            return subcommand.execute(args[1:])
+        except subcommands.CommandParsingError as err:
+            print("Exception with subcommand: ", err.msg)
+            return err
 
     def __init__(self, shell):
         Configurable.__init__(self, config=shell.config)
@@ -130,7 +75,7 @@ class TypeQLMagic(Magics, Configurable):
     strict_transactions = Bool(
         False,
         config=True,
-        help="Require session and transaction types to be specified for every transaction."
+        help="Require transaction types to be specified for every transaction."
     )
     global_inference = Bool(
         False,
@@ -138,46 +83,34 @@ class TypeQLMagic(Magics, Configurable):
         help="Enable rule inference for all queries. Can be overridden per query with -i."
     )
 
+    QUERY_RESULT_VARIABLE = "_typeql_result"
+    QUERY_STRING_VARIABLE = "_typeql_query_string"
+
     @needs_local_scope
-    @line_magic("typeql")
     @cell_magic("typeql")
     @magic_arguments()
-    @argument("line", default="", nargs="*", type=str, help="Valid TypeQL string.")
-    @argument("-r", "--result", type=str, help="Assign query result to the named variable instead of printing.")
-    @argument("-f", "--file", type=str, help="Read in query from a TypeQL file at the specified path.")
-    @argument("-i", "--inference", type=bool, help="Enable (True) or disable (False) rule inference for query.")
-    @argument("-s", "--session", type=str, help="Force a particular session type for query, 'schema' or 'data'.")
-    @argument("-t", "--transaction", type=str, help="Force a particular transaction type for query, 'read' or 'write'.")
     def execute(self, line="", cell="", local_ns=None):
         if local_ns is None:
             local_ns = {}
 
         args = parse_argstring(self.execute, line)
-        query = " ".join(args.line) + "\n" + cell
-        query = substitute_vars(query, local_ns)
+        query = cell
 
         # Save globals and locals, so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
         user_ns.update(local_ns)
 
-        if args.file:
-            with open(args.file, "r") as infile:
-                query = infile.read() + "\n" + query
-
-        if query.strip() == "":
+        if not query.strip():
             raise ArgumentError("No query string supplied.")
 
         connection = Connection.get()
-        query = Query(query, args.session, args.transaction, args.inference, self.strict_transactions, self.global_inference)
-        result = query.run(connection, self.show_info)
+        tx = connection.get_active_transaction()
+        answer_type, answer = self._run_query(tx, query)
+        self._print_answers(answer_type, answer)
 
-        if args.result:
-            print("Returning data to local variable: '{}'".format(args.result))
-            self.shell.user_ns.update({args.result: result})
-            return
-
-        # Return results into the default ipython _ variable
-        return result
+        self.shell.user_ns.update({self.QUERY_RESULT_VARIABLE: answer})
+        self.shell.user_ns.update({self.QUERY_STRING_VARIABLE: query})
+        return answer
 
     def __init__(self, shell):
         Configurable.__init__(self, config=shell.config)
@@ -185,3 +118,32 @@ class TypeQLMagic(Magics, Configurable):
 
         # Add ourselves to the list of module configurable via %config
         self.shell.configurables.append(self)
+
+    def _run_query(self, transaction, query):
+        from typedb.concept.answer.concept_row_iterator import ConceptRowIterator
+        from typedb.concept.answer.concept_document_iterator import ConceptDocumentIterator
+        from typedb.concept.answer.ok_query_answer import OkQueryAnswer
+        answer = transaction.query(query).resolve()
+        if answer.is_concept_rows():
+            return (ConceptRowIterator, list(answer.as_concept_rows()))
+        elif answer.is_concept_documents():
+            return (ConceptDocumentIterator, list(answer.as_concept_documents()))
+        elif answer.is_ok():
+            return (OkQueryAnswer, None)
+        else:
+            raise NotImplementedError("Unhandled answer type")
+
+
+    def _print_answers(self, answer_type, answer):
+        from typedb.concept.answer.concept_row_iterator import ConceptRowIterator
+        from typedb.concept.answer.concept_document_iterator import ConceptDocumentIterator
+        from typedb.concept.answer.ok_query_answer import OkQueryAnswer
+        from typedb_jupyter.utils.display import print_rows, print_documents
+        if answer_type == OkQueryAnswer:
+            print("Query completed successfully! (No results to show)")
+        elif answer_type == ConceptDocumentIterator:
+            print_documents(answer)
+        elif answer_type == ConceptRowIterator:
+            print_rows(answer)
+        else:
+            raise NotImplementedError("Unhandled answer type")

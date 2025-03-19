@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "typedb-jupyter"
-version = "0.3"
+version = "0.4"
 description = "Jupyter connector for TypeDB"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -22,12 +22,13 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "typedb-client~=2.17",
+    "typedb-driver~=3.0.2",
+    "netgraph~=4.13.2",
     "ipython"
 ]
 
 [project.urls]
 "Repository" = "https://github.com/typedb-osi/typedb-jupyter"
 "Release notes" = "https://github.com/typedb-osi/typedb-jupyter/blob/master/RELEASE_NOTES.md"
-"TypeDB" = "https://github.com/vaticle/typedb"
-"Vaticle" = "https://vaticle.com/"
+"TypeDB" = "https://github.com/typedb/typedb"
+"Vaticle" = "https://typedb.com/"

@@ -19,27 +19,15 @@
 # under the License.
 #
 
-class ArgumentError(ValueError):
-    pass
+def visualise(typeql_query_string, typeql_result, visualiser=None):
+    from typedb_jupyter.graph.query import QueryGraph
+    from typedb_jupyter.graph.answer import AnswerGraph
+    from typedb_jupyter.utils.parser import TypeQLVisitor
 
-
-class QueryParsingError(ValueError):
-    pass
-
-class ConnectionError(BaseException):
-    pass
-
-
-class CommandParsingError(BaseException):
-    def __init__(self, what, msg):
-        BaseException.__init__(self)
-        self.what = what
-        self.msg = msg
-
-def is_typedb_jupyter_exception(err):
-    return (
-        isinstance(err, ArgumentError) or
-        isinstance(err, ConnectionError) or
-        isinstance(err, CommandParsingError) or
-        isinstance(err, QueryParsingError)
-    )
+    parsed = TypeQLVisitor.parse_and_visit(typeql_query_string)
+    query_graph = QueryGraph(parsed)
+    answer_graph = AnswerGraph.build(query_graph, typeql_result)
+    if visualiser is None:
+        from .answer import PlottableGraphBuilder
+        visualiser = PlottableGraphBuilder()
+    answer_graph.plot_with_visualiser(visualiser)
